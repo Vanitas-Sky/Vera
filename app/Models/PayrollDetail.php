@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class PayrollDetail extends Model
+{
+    use HasFactory;
+
+    public $timestamps = false; // Apagamos los timestamps según tu diseño
+
+    protected $fillable = [
+        'payroll_period_id',
+        'employee_id',
+        'gross_salary',
+        'isr_retention',
+        'imss_employee',
+        'net_salary'
+    ];
+
+    protected $casts = [
+        'gross_salary' => 'decimal:2',
+        'isr_retention' => 'decimal:2',
+        'imss_employee' => 'decimal:2',
+        'net_salary' => 'decimal:2',
+    ];
+
+    public function payrollPeriod()
+    {
+        return $this->belongsTo(PayrollPeriod::class);
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+}

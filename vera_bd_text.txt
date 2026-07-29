@@ -1,0 +1,417 @@
+﻿Esta es una explicación detallada del diseño de la base de datos para Vera AI, organizada por módulos funcionales. 
+El objetivo principal de esta arquitectura es servir como la columna vertebral determinista y segura del sistema: se encarga de guardar la información procesada desde los XMLs, calcular balances fiscales exactos y servir de repositorio para que los modelos de Inteligencia Artificial (NLP, ML, LLM) consulten contexto y almacenen sus análisis. 
+Módulo 1: Usuarios, Empresas y Accesos (Estructura Multi-tenant)
+Este módulo gestiona la seguridad, la autenticación y el soporte para que un solo usuario (como un contador) pueda gestionar múltiples empresas, o que una empresa tenga varios colaboradores. 
+roles:
+Objetivo: Definir la jerarquía de permisos dentro del sistema (Super Admin, Administrador PyME, Contador, Capturista). 
+Función: Restringir el acceso a módulos sensibles; por ejemplo, que solo los contadores puedan modificar la Matriz de Indispensabilidad o calcular nóminas. 
+users:
+Objetivo: Guardar la identidad de las personas que inician sesión en Vera AI. 
+Función: Almacenar credenciales de forma segura (contraseña cifrada), correo electrónico y estado de la cuenta. 
+companies:
+Objetivo: Representar a cada PyME o negocio registrado en la plataforma. 
+Función: Guardar los datos fiscales reales de la empresa (RFC, Razón Social, Régimen Fiscal, Código Postal) y la llave de conexión API con el entorno de pruebas del PAC para la facturación simulada. 
+user_companies:
+Objetivo: Tabla intermedia (N:M) que vincula usuarios con empresas. 
+Función: Permitir que un despacho contable gestione decenas de PyMEs desde una misma cuenta o asignarle roles específicos a un usuario en cada empresa. 
+Módulo 2: Catálogos Oficiales del SAT (Datos Semilla)
+Son tablas estáticas alimentadas con la información oficial emitida por la autoridad fiscal (SAT). Garantizan que toda la información ingresada por archivos XML o formularios esté estandarizada. 
+sat_tax_regimes: Almacena las claves oficiales de los regímenes fiscales (ej. 601 General de Ley, 612 Personas Físicas con Actividad Empresarial). 
+sat_economic_activities: Contiene la lista de giros comerciales u oficios registrados por el SAT. 
+sat_product_services: Catálogo masivo de las claves de 8 dígitos con las que el SAT clasifica todos los productos y servicios facturables en México. 
+sat_payment_forms y sat_payment_methods: Guardan las formas (efectivo, transferencia) y métodos de pago (PUE - Pago en una sola exhibición, PPD - Pago en parcialidades), clave para identificar errores de forma o discrepancias fiscales. 
+sat_cfdi_uses: Registra los usos autorizados de la factura (ej. G01 Adquisición de mercancías, G03 Gastos en general). 
+Módulo 3: Perfil Fiscal y Matriz de Indispensabilidad
+Este módulo constituye el núcleo de reglas de negocio para evaluar la deducibilidad de las compras de la PyME. 
+company_economic_activities:
+Objetivo: Vincular la empresa con sus actividades comerciales o giros registrados. 
+Función: Delimitar qué actividades económicas realiza el negocio (por ejemplo, una agencia de desarrollo de software frente a un restaurante). 
+indispensability_matrix:
+Objetivo: Cruzar los giros de la empresa con las claves de productos y servicios del SAT. 
+Función: Asignar la regla rígida de deducibilidad para cada clave (DEDUCIBLE / Verde, RIESGO / Amarillo, NO_DEDUCIBLE / Rojo). Define si un gasto cumple con el criterio de "estricta indispensabilidad" para ese negocio específico. 
+Módulo 4: Ingestión, XMLs (CFDI 4.0) y Gastos
+Guarda toda la información contable extraída de forma asíncrona a partir de los archivos XML subidos por el usuario. 
+cfdis:
+Objetivo: Almacenar la cabecera/encabezado de cada factura electrónica recibida o emitida. 
+Función: Guardar el UUID (Folio Fiscal), los RFCs emisor y receptor, la fecha, los totales, el IVA trasladado/acreditable, el ISR retenido y el resultado general del Semáforo de Deducibilidad asignado a la factura. 
+cfdi_items:
+Objetivo: Desglosar cada línea o concepto individual contenido dentro de un XML. 
+Función: Almacenar la clave del SAT del producto, el texto bruto escrito por el proveedor en la descripción y la interpretación limpia realizada por el módulo de Procesamiento de Lenguaje Natural (NLP). Permite auditar la deducibilidad ítem por ítem. 
+Módulo 5: Gestión Operativa (Nómina y OpEx Fijo)
+Centraliza los gastos operativos que no siempre provienen de facturas directas del SAT, completando la visión del flujo de caja de la PyME. 
+employees:
+Objetivo: Mantener el padrón de trabajadores de la empresa. 
+Función: Registrar RFC, CURP y salario base para llevar a cabo el cálculo de impuestos sobre nómina. 
+payroll_periods y payroll_details:
+Objetivo: Registrar las dispersiones de nómina procesadas y el desglose de cada empleado. 
+Función: Ejecutar y guardar las fórmulas deterministas de retención de ISR (Tablas del Artículo 96) y aportaciones de seguridad social (IMSS), permitiendo reflejar la carga impositiva exacta del personal. 
+fixed_expenses:
+Objetivo: Controlar el gasto operativo fijo recurrente (OpEx: contratos de renta, pólizas de seguros, servicios de internet o software). 
+Función: Proyectar costos fijos mensuales y enviar alertas antes de las fechas de vencimiento. 
+Módulo 6: Inteligencia Artificial, Medidor de Riesgo, Alertas y Consultoría
+En este módulo se persisten los análisis generados por las capas de Inteligencia Artificial (Machine Learning, NLP y LLMs) y el motor de alertas. 
+notifications:
+Objetivo: Alimentar el Centro de Notificaciones del Dashboard. 
+Función: Guardar avisos prioritarios de vencimientos cercanos, errores de forma en facturas (incompatibilidades PUE/PPD) o alertas de discrepancia fiscal. 
+risk_evaluations:
+Objetivo: Guardar el histórico del Medidor de Riesgo de la PyME. 
+Función: Registrar la calificación de riesgo (1 al 100) generada por el algoritmo de Machine Learning, junto con un campo JSONB que almacena las anomalías y variaciones de gasto atípicas detectadas en el mes. 
+llm_consultant_reports:
+Objetivo: Repositorio de los informes ejecutivos elaborados por el Agente Consultor LLM. 
+Función: Guardar la explicación en lenguaje claro del balance financiero mensual y los consejos tácticos de optimización fiscal en un formato de texto y JSON estructurado. 
+Módulo 7: Facturación Simulada (PAC Sandbox)
+simulated_invoices:
+Objetivo: Gestionar las pruebas de emisión de comprobantes fiscales dentro del módulo de entrenamiento. 
+Función: Guardar las facturas generadas desde el formulario CFDI 4.0, almacenar el UUID de prueba devuelto por el PAC Sandbox y vincular las rutas de los archivos de representación impresa (PDF y XML de prueba). 
+Resumen del Flujo de Información en la Base de Datos
+Entrada Determinista: Los XMLs subidos se convierten en registros en cfdis y cfdi_items. 
+Evaluación de Negocio: Se contrasta cfdi_items contra la indispensability_matrix para marcar el estatus del semáforo (Verde / Rojo). 
+Paso de IA (NLP): Si la clave es ambigua o amplia, el NLP analiza la descripción del ítem y asigna una categoría limpia, marcándolo en Amarillo de ser necesario. 
+Agregación Financiera: El backend suma ingresos, egresos deducibles, nóminas (payroll_periods) y gastos fijos (fixed_expenses). 
+Salida Inteligente: Los modelos de Machine Learning y LLM leen este balance agrupado y escriben sus hallazgos en risk_evaluations y llm_consultant_reports, quedando listos para mostrarse inmediatamente en la interfaz web. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+DDL en SQL (Código de Creación de Tablas)
+Módulo 1: Usuarios, Empresas y Accesos (Multi-tenant)
+-- Roles de usuario en el sistema
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL, -- 'SUPER_ADMIN', 'ADMIN_PYME', 'ACCOUNTANT', 'OPERATOR'
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Usuarios registrados
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    role_id INT NOT NULL REFERENCES roles(id),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Empresas / PyMEs registradas en la plataforma
+CREATE TABLE companies (
+    id BIGSERIAL PRIMARY KEY,
+    rfc VARCHAR(13) UNIQUE NOT NULL,
+    legal_name VARCHAR(255) NOT NULL,
+    trade_name VARCHAR(255),
+    postal_code VARCHAR(10) NOT NULL,
+    tax_regime_code VARCHAR(10) NOT NULL, -- Referencia a sat_tax_regimes
+    pac_api_key_sandbox VARCHAR(255), -- Credencial de API Sandbox
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Relación N:M para despachos contables que manejan múltiples empresas
+CREATE TABLE user_companies (
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    company_id BIGINT REFERENCES companies(id) ON DELETE CASCADE,
+    role_in_company VARCHAR(50) DEFAULT 'ACCOUNTANT',
+    PRIMARY KEY (user_id, company_id)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Módulo 2: Catálogos Oficiales del SAT (Datos Semilla)
+-- Regímenes Fiscales (ej. 601 General de Ley, 612 Personas Físicas con Actividad Empresarial)
+CREATE TABLE sat_tax_regimes (
+    code VARCHAR(10) PRIMARY KEY,
+    description VARCHAR(255) NOT NULL
+);
+
+-- Actividades Económicas (Giros de negocio)
+CREATE TABLE sat_economic_activities (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT
+);
+
+-- Catálogo de Claves de Productos y Servicios (8 dígitos)
+CREATE TABLE sat_product_services (
+    code VARCHAR(8) PRIMARY KEY,
+    description VARCHAR(255) NOT NULL,
+    similar_words TEXT -- Para búsquedas rápidas
+);
+
+-- Formas de Pago (01 Efectivo, 03 Transferencia, etc.)
+CREATE TABLE sat_payment_forms (
+    code VARCHAR(5) PRIMARY KEY,
+    description VARCHAR(100) NOT NULL
+);
+
+-- Métodos de Pago (PUE - Pago en una sola exhibición, PPD - Pago en parcialidades)
+CREATE TABLE sat_payment_methods (
+    code VARCHAR(5) PRIMARY KEY,
+    description VARCHAR(100) NOT NULL
+);
+
+-- Uso de CFDI (G01 Adquisición de mercancías, G03 Gastos en general, etc.)
+CREATE TABLE sat_cfdi_uses (
+    code VARCHAR(5) PRIMARY KEY,
+    description VARCHAR(100) NOT NULL
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Módulo 3: Perfil Fiscal y Matriz de Indispensabilidad
+-- Giros/Actividades seleccionados por cada PyME
+CREATE TABLE company_economic_activities (
+    company_id BIGINT REFERENCES companies(id) ON DELETE CASCADE,
+    sat_economic_activity_id INT REFERENCES sat_economic_activities(id),
+    PRIMARY KEY (company_id, sat_economic_activity_id)
+);
+
+-- Matriz de Compatibilidad/Indispensabilidad por PyME
+CREATE TABLE indispensability_matrix (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    sat_product_service_code VARCHAR(8) NOT NULL REFERENCES sat_product_services(code),
+    deductibility_status VARCHAR(20) NOT NULL CHECK (deductibility_status IN ('DEDUCIBLE', 'RIESGO', 'NO_DEDUCIBLE')), -- Verde, Amarillo, Rojo
+    notes TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_company_prod_service UNIQUE (company_id, sat_product_service_code)
+);
+
+
+
+
+
+
+
+
+Módulo 4: Ingestión, XMLs (CFDI 4.0) y Gastos
+-- Encabezado de Facturas (CFDI 4.0 procesados por el Parser)
+CREATE TABLE cfdis (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    uuid VARCHAR(36) UNIQUE NOT NULL, -- Folio Fiscal
+    rfc_issuer VARCHAR(13) NOT NULL,
+    name_issuer VARCHAR(255) NOT NULL,
+    rfc_receiver VARCHAR(13) NOT NULL,
+    name_receiver VARCHAR(255) NOT NULL,
+    invoice_type VARCHAR(10) NOT NULL CHECK (invoice_type IN ('I', 'E', 'N')), -- Ingreso, Egreso, Nómina
+    issue_date TIMESTAMP NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+    vat_amount DECIMAL(12,2) DEFAULT 0.00, -- IVA Trasladado[cite: 1]
+    vat_retention DECIMAL(12,2) DEFAULT 0.00,
+    isr_retention DECIMAL(12,2) DEFAULT 0.00,
+    total DECIMAL(12,2) NOT NULL,
+    payment_method_code VARCHAR(5) REFERENCES sat_payment_methods(code), -- PUE / PPD[cite: 1]
+    payment_form_code VARCHAR(5) REFERENCES sat_payment_forms(code),
+    cfdi_use_code VARCHAR(5) REFERENCES sat_cfdi_uses(code),
+    deductibility_status VARCHAR(20) DEFAULT 'VERDE' CHECK (deductibility_status IN ('VERDE', 'AMARILLO', 'ROJO')), -- Semáforo[cite: 1]
+    raw_xml_path VARCHAR(500), -- Ubicación de almacenamiento del archivo XML[cite: 1]
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Detalle de Conceptos por Factura
+CREATE TABLE cfdi_items (
+    id BIGSERIAL PRIMARY KEY,
+    cfdi_id BIGINT NOT NULL REFERENCES cfdis(id) ON DELETE CASCADE,
+    sat_product_service_code VARCHAR(8) NOT NULL REFERENCES sat_product_services(code),
+    item_number INT NOT NULL,
+    original_description TEXT NOT NULL, -- Texto bruto del proveedor[cite: 1]
+    nlp_interpreted_category VARCHAR(100), -- Categoría optimizada por el NLP[cite: 1]
+    quantity DECIMAL(10,4) NOT NULL,
+    unit_price DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+    vat_amount DECIMAL(12,2) DEFAULT 0.00,
+    deductibility_status VARCHAR(20) DEFAULT 'VERDE' CHECK (deductibility_status IN ('VERDE', 'AMARILLO', 'ROJO')) -- Semáforo ítem por ítem[cite: 1]
+);
+
+
+
+
+
+
+
+
+
+
+
+
+Módulo 5: Gestión Operativa (Nómina y OpEx Fijo)
+-- Empleados de la PyME
+CREATE TABLE employees (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    rfc VARCHAR(13) NOT NULL,
+    curp VARCHAR(18) NOT NULL,
+    full_name VARCHAR(200) NOT NULL,
+    base_salary DECIMAL(10,2) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Periodos de Nómina Procesados[cite: 1]
+CREATE TABLE payroll_periods (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    period_name VARCHAR(100) NOT NULL, -- ej. "Quincena 1 - Julio 2026"
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_gross DECIMAL(12,2) NOT NULL,
+    total_isr_retention DECIMAL(12,2) NOT NULL, -- Cálculo Art. 96[cite: 1]
+    total_imss_employee DECIMAL(12,2) NOT NULL,
+    total_imss_employer DECIMAL(12,2) NOT NULL,
+    total_net DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- Detalle individual por empleado en la nómina
+CREATE TABLE payroll_details (
+    id BIGSERIAL PRIMARY KEY,
+    payroll_period_id BIGINT NOT NULL REFERENCES payroll_periods(id) ON DELETE CASCADE,
+    employee_id BIGINT NOT NULL REFERENCES employees(id),
+    gross_salary DECIMAL(10,2) NOT NULL,
+    isr_retention DECIMAL(10,2) NOT NULL,
+    imss_employee DECIMAL(10,2) NOT NULL,
+    net_salary DECIMAL(10,2) NOT NULL
+);
+
+-- Control de Costos Fijos Operativos (OpEx: Rentas, Servicios, Seguros)[cite: 1]
+CREATE TABLE fixed_expenses (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    provider_name VARCHAR(150) NOT NULL,
+    category VARCHAR(50) NOT NULL CHECK (category IN ('RENTA', 'SEGURO', 'SERVICIO', 'OTRO')), --[cite: 1]
+    description TEXT,
+    monthly_amount DECIMAL(10,2) NOT NULL,
+    due_day INT NOT NULL CHECK (due_day BETWEEN 1 AND 31),
+    contract_start_date DATE,
+    contract_end_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Módulo 6: Módulo de IA, Score de Riesgo, Alertas y Consultoría
+-- Centro de Notificaciones y Alertas Críticas[cite: 1]
+CREATE TABLE notifications (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    alert_type VARCHAR(50) NOT NULL CHECK (alert_type IN ('VENCIMIENTO', 'DISCREPANCIA', 'ERROR_FORMA')), --[cite: 1]
+    priority VARCHAR(20) DEFAULT 'MEDIA' CHECK (priority IN ('BAJA', 'MEDIA', 'ALTA')),
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Medidor de Riesgo de Discrepancia Fiscal (Machine Learning)[cite: 1]
+CREATE TABLE risk_evaluations (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    period_year INT NOT NULL,
+    period_month INT NOT NULL,
+    risk_score INT NOT NULL CHECK (risk_score BETWEEN 1 AND 100), -- Puntaje 1-100[cite: 1]
+    anomalies_detected_json JSONB, -- Registra variaciones atípicas detectadas por ML[cite: 1]
+    evaluated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_company_period_risk UNIQUE (company_id, period_year, period_month)
+);
+
+-- Informes de Consultoría Generados por el Agente LLM[cite: 1]
+CREATE TABLE llm_consultant_reports (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    period_year INT NOT NULL,
+    period_month INT NOT NULL,
+    executive_summary TEXT NOT NULL,
+    recommendations_json JSONB NOT NULL, -- Lista estructurada de consejos tácticos de reducción[cite: 1]
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_company_period_llm UNIQUE (company_id, period_year, period_month)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Módulo 7: Facturación Simulada (PAC Sandbox)
+-- Registro de Facturas Emitidas en Sandbox[cite: 1]
+CREATE TABLE simulated_invoices (
+    id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    test_uuid VARCHAR(36) NOT NULL, -- UUID retornado por la API del PAC[cite: 1]
+    receiver_rfc VARCHAR(13) NOT NULL,
+    receiver_name VARCHAR(255) NOT NULL,
+    receiver_postal_code VARCHAR(10) NOT NULL,
+    receiver_tax_regime_code VARCHAR(10) NOT NULL,
+    cfdi_use_code VARCHAR(5) REFERENCES sat_cfdi_uses(code),
+    payment_method_code VARCHAR(5) REFERENCES sat_payment_methods(code),
+    payment_form_code VARCHAR(5) REFERENCES sat_payment_forms(code),
+    total DECIMAL(12,2) NOT NULL,
+    pdf_sandbox_path VARCHAR(500),
+    xml_sandbox_path VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+
+
+
+índices Estratégicos para Rendimiento (Optimización de Queries)
+Para garantizar que los tableros visuales y los algoritmos analíticos carguen instantáneamente[cite: 1]:
+-- Búsqueda de facturas por empresa y fecha (Dashboard de Flujo de Caja)[cite: 1]
+CREATE INDEX idx_cfdis_company_date ON cfdis(company_id, issue_date);
+
+-- Búsqueda de facturas marcadas por el semáforo (Filtros de Riesgo / Auditoría)[cite: 1]
+CREATE INDEX idx_cfdis_deductibility ON cfdis(company_id, deductibility_status);
+
+-- Búsqueda de conceptos para el motor NLP y Semáforo[cite: 1]
+CREATE INDEX idx_cfdi_items_prod_service ON cfdi_items(sat_product_service_code);
+
+-- Notificaciones no leídas por empresa
+CREATE INDEX idx_notifications_unread ON notifications(company_id, is_read) WHERE is_read = FALSE;
+
+
