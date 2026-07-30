@@ -1,8 +1,18 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-vera-dark leading-tight">
-            {{ __('Semáforo y Panel Fiscal') }}
-        </h2>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+                {{ __('Semáforo y Panel Fiscal') }}
+            </h2>
+
+            <!-- Formulario de Filtro de Tiempo -->
+            <form action="{{ route('dashboard') }}" method="GET" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                <label for="period" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mes Fiscal:</label>
+                <input type="month" id="period" name="period" value="{{ $selectedPeriod }}" 
+                       class="border-none bg-transparent focus:ring-0 text-sm font-bold text-vera-dark cursor-pointer py-1"
+                       onchange="this.form.submit()">
+            </form>
+        </div>
     </x-slot>
 
     <div class="py-12 bg-slate-50 min-h-screen">
