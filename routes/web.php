@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FixedExpenseController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ConciliationController;
 use App\Http\Middleware\EnsureUserHasCompany;
 
 /*
@@ -71,6 +72,11 @@ Route::middleware(['auth', 'verified', EnsureUserHasCompany::class])->group(func
     Route::get('/billing/{id}/xml', [BillingController::class, 'downloadXml'])->name('billing.xml');
     Route::get('/billing/{id}/pdf', [BillingController::class, 'downloadPdf'])->name('billing.pdf');
     Route::get('/billing/{id}/download-zip', [BillingController::class, 'downloadZip'])->name('billing.zip');
+
+    // Módulo de Conciliación Bancaria
+    Route::get('/conciliations', [\App\Http\Controllers\ConciliationController::class, 'index'])->name('conciliations.index');
+    Route::post('/conciliations/preview', [\App\Http\Controllers\ConciliationController::class, 'preview'])->name('conciliations.preview');
+    Route::post('/conciliations/import', [\App\Http\Controllers\ConciliationController::class, 'import'])->name('conciliations.import');
 });
 
 Route::middleware('auth')->group(function () {
