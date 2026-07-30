@@ -17,15 +17,11 @@ class DashboardController extends Controller
             return redirect()->route('companies.create')->with('error', 'Primero debes registrar tu empresa.');
         }
 
-        // 1. Atrapamos el periodo enviado por la vista, o usamos el actual por defecto
-        // El input type="month" envía el formato "YYYY-MM" (ej. "2026-07")
         $selectedPeriod = $request->input('period', now()->format('Y-m'));
-
-        // Separamos el año y el mes para nuestras consultas
         $currentYear = (int) substr($selectedPeriod, 0, 4);
         $currentMonth = (int) substr($selectedPeriod, 5, 2);
 
-        // 1. Facturas de Ingreso (Ventas) -> Solo MES ACTUAL y NO CANCELADAS
+        // 1. Facturas de Ingreso
         $incomes = \App\Models\Invoice::where('company_id', $company->id)
             ->where('type', 'I')
             ->where('is_canceled', false)
@@ -37,7 +33,7 @@ class DashboardController extends Controller
         $totalIncomeIva = $incomes->sum('iva');
         $subtotalIncome = $incomes->sum('subtotal');
 
-        // 2. Facturas de Egreso (Gastos) -> Solo MES ACTUAL y NO CANCELADAS
+        // 2. Facturas de Egreso
         $expenses = \App\Models\Invoice::where('company_id', $company->id)
             ->where('type', 'E')
             ->where('is_canceled', false)
@@ -49,7 +45,15 @@ class DashboardController extends Controller
         $totalExpenseIva = $expenses->sum('iva');
         $subtotalExpense = $expenses->sum('subtotal');
 
-        // 3. Nóminas (Operación) -> Solo MES ACTUAL
+        // 3. Banco y Discrepancia
+        $bankWithdrawals = \App\Models\BankTransaction::where('company_id', $company->id)
+            ->whereMonth('transaction_date', $currentMonth)
+            ->whereYear('transaction_date', $currentYear)
+            ->sum('withdrawal');
+
+        $discrepancy = $bankWithdrawals - $totalExpense;
+
+        // 4. Nóminas
         $payrolls = \App\Models\PayrollPeriod::where('company_id', $company->id)
             ->whereMonth('start_date', $currentMonth)
             ->whereYear('start_date', $currentYear)
@@ -59,40 +63,98 @@ class DashboardController extends Controller
         $totalPayrollNet = $payrolls->sum('total_net');
         $totalIsrRetained = $payrolls->sum('total_isr_retention');
 
-        // 4. Proyección OpEx vs Realidad
+        // 5. Proyección OpEx
         $projectedOpex = \App\Models\FixedExpense::where('company_id', $company->id)
             ->where('is_active', true)
             ->sum('monthly_amount');
 
-        // Comparamos el subtotal facturado contra la proyección antes de IVA
         $missingInvoicesAmount = 0;
         if ($projectedOpex > $subtotalExpense) {
             $missingInvoicesAmount = $projectedOpex - $subtotalExpense;
         }
 
-        // 5. Cálculos Fiscales Clave
+        // 6. Cálculos Fiscales Clave
         $netIva = $totalIncomeIva - $totalExpenseIva;
         $netProfit = $subtotalIncome - $subtotalExpense - $totalPayrollGross;
 
-        // 6. Lógica del Semáforo Fiscal
+        // ==========================================
+        // 7. LÓGICA DEL SEMÁFORO (CORREGIDA EN CASCADA)
+        // ==========================================
         $taxBurdenRatio = $totalIncome > 0 ? ($netProfit / $totalIncome) * 100 : 0;
 
+        // Estado base
         $semaforo = 'verde';
         $mensajeSemaforo = 'Tu balance financiero y deducciones se encuentran en un nivel saludable para este mes.';
 
-        if ($taxBurdenRatio > 65 && $totalIncome > 10000) {
-            $semaforo = 'rojo';
-            $mensajeSemaforo = '¡Alerta Roja Fiscal! Tienes ingresos altos con muy pocas deducciones este mes. Te arriesgas a pagar muchos impuestos.';
-        } elseif ($taxBurdenRatio > 40) {
+        // Evaluamos primer riesgo: Carga fiscal por falta de gastos
+        if ($taxBurdenRatio > 40) {
             $semaforo = 'amarillo';
             $mensajeSemaforo = 'Atención: Tu margen de utilidad es alto. Monitorea tus compras y gastos antes del cierre mensual.';
         }
+        if ($taxBurdenRatio > 65 && $totalIncome > 10000) {
+            $semaforo = 'rojo';
+            $mensajeSemaforo = '¡Alerta Roja Fiscal! Tienes ingresos altos con muy pocas deducciones este mes. Te arriesgas a pagar muchos impuestos.';
+        }
 
-        // 7. Historial para la tabla (Aquí traemos todas para ver el registro, no solo las del mes)
-        // CORRECCIÓN: Agregué esta consulta que te faltaba para que la tabla no salga vacía.
+        // Evaluamos riesgo crítico: Discrepancia Fiscal (Este sobrescribe y mata a los anteriores)
+        if ($discrepancy > 0) {
+            $semaforo = 'rojo';
+            $mensajeSemaforo = 'RIESGO DE AUDITORÍA: Tienes $' . number_format($discrepancy, 2) . ' de retiros bancarios sin factura. El SAT puede detectar discrepancia fiscal.';
+        }
+
+        // 8. Historial de facturas
         $invoices = \App\Models\Invoice::where('company_id', $company->id)
             ->orderBy('issue_date', 'desc')
             ->get();
+
+        $alerts = [];
+
+        // Alerta A: Vencimientos de Contratos (OpEx)
+        $expiringContracts = \App\Models\FixedExpense::where('company_id', $company->id)
+            ->where('is_active', true)
+            ->whereNotNull('contract_end_date')
+            ->where('contract_end_date', '<=', now()->addDays(30))
+            ->get();
+
+        foreach ($expiringContracts as $contract) {
+            $daysLeft = (int) now()->diffInDays($contract->contract_end_date, false);
+
+            if ($daysLeft < 0) {
+                $alerts[] = [
+                    'type' => 'danger',
+                    'icon' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+                    'title' => 'Contrato Vencido',
+                    'message' => "El contrato de {$contract->provider_name} ({$contract->category}) venció hace " . abs($daysLeft) . " días."
+                ];
+            } else {
+                $alerts[] = [
+                    'type' => 'warning',
+                    'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+                    'title' => 'Vencimiento Próximo',
+                    'message' => "La póliza/contrato de {$contract->provider_name} vence en {$daysLeft} días."
+                ];
+            }
+        }
+
+        // Alerta B: Fuga de Comprobantes OpEx
+        if ($missingInvoicesAmount > 0) {
+            $alerts[] = [
+                'type' => 'warning',
+                'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'title' => 'Fuga de Comprobantes',
+                'message' => "Tienes $" . number_format($missingInvoicesAmount, 2) . " en costos fijos que pagaste pero no has facturado este mes."
+            ];
+        }
+
+        // Alerta C: Si no hay nada de qué preocuparse
+        if (empty($alerts)) {
+            $alerts[] = [
+                'type' => 'success',
+                'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+                'title' => 'Todo en orden',
+                'message' => 'No tienes contratos por vencer ni anomalías operativas pendientes.'
+            ];
+        }
 
         return view('dashboard', compact(
             'totalIncome',
@@ -109,8 +171,11 @@ class DashboardController extends Controller
             'projectedOpex',
             'missingInvoicesAmount',
             'subtotalExpense',
-            'invoices', // Variable reincorporada
-            'selectedPeriod'
+            'invoices',
+            'selectedPeriod',
+            'bankWithdrawals', // <-- Añadido
+            'discrepancy',      // <-- Añadido
+            'alerts'
         ));
     }
 }
