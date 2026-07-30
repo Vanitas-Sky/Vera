@@ -45,6 +45,8 @@ Route::middleware(['auth', 'verified', EnsureUserHasCompany::class])->group(func
     Route::get('/payrolls', [PayrollController::class, 'index'])->name('payrolls.index');
     Route::post('/payrolls/generate', [PayrollController::class, 'generate'])->name('payrolls.generate');
     Route::get('/payrolls/{id}', [PayrollController::class, 'show'])->name('payrolls.show');
+    Route::delete('/payrolls/{id}', [\App\Http\Controllers\PayrollController::class, 'destroy'])->name('payrolls.destroy');
+    Route::get('/payrolls/receipt/{id}/pdf', [\App\Http\Controllers\PayrollController::class, 'downloadReceiptPdf'])->name('payrolls.receipt.pdf');
 
     // Rutas de Facturas (XML)
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');

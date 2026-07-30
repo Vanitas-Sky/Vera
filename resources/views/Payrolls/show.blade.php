@@ -20,6 +20,19 @@
                         <h3 class="text-lg font-bold text-vera-dark">{{ $detail->employee->full_name }}</h3>
                         <p class="text-sm text-vera-gray">RFC: {{ $detail->employee->rfc }} | NSS: {{ $detail->employee->nss }}</p>
                     </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-vera-dark">{{ $detail->employee->full_name }}</h3>
+                        <p class="text-sm text-vera-gray">RFC: {{ $detail->employee->rfc }} | NSS: {{ $detail->employee->nss }}</p>
+                        <!-- Botón Descargar PDF Recibo -->
+                        <div class="mt-3">
+                            <a target="_blank" href="{{ route('payrolls.receipt.pdf', $detail->id) }}" class="inline-flex items-center gap-2 text-xs font-bold text-vera-green hover:text-emerald-700 transition uppercase tracking-wider">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Descargar PDF Recibo
+                            </a>
+                        </div>
+                    </div>
                     <div class="text-right">
                         <p class="text-sm text-slate-500">Neto a Pagar</p>
                         <p class="text-2xl font-black text-vera-green">${{ number_format($detail->net_salary, 2) }}</p>
@@ -69,11 +82,6 @@
                             <p class="font-bold">${{ number_format($detail->isr_breakdown['total_isr'], 2) }}</p>
                         </div>
                         @endif
-
-                        <div class="p-3 bg-vera-dark text-white rounded border border-slate-800 shadow-sm">
-                            <p class="text-xs text-slate-400 mb-1">ISR a Retener</p>
-                            <p class="font-bold">${{ number_format($detail->isr_breakdown['total_isr'], 2) }}</p>
-                        </div>
                     </div>
                 </div>
             </div>
