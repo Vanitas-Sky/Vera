@@ -30,12 +30,38 @@ class InvoiceController extends Controller
 
         $company = Auth::user()->companies()->first();
 
+        // Seguro 1: Evitar que el sistema truene si la empresa aún no ha configurado su RFC
+        if (empty($company->rfc)) {
+            return redirect()->back()->with('error', 'Acción denegada: Debes configurar el RFC de tu empresa en tu perfil antes de subir facturas.');
+        }
+
         try {
             // Leemos el contenido crudo del archivo físico
             $xmlContent = file_get_contents($request->file('xml_file')->getRealPath());
 
             // Usamos tu servicio para extraer los datos
             $parsedData = $xmlParser->parse($xmlContent);
+
+            // --- LÓGICA CORE: IDENTIFICACIÓN DE INGRESO / EGRESO ---
+            $rfcEmisor = strtoupper(trim($parsedData['issuer_rfc']));
+            $rfcReceptor = strtoupper(trim($parsedData['receiver_rfc']));
+            $miRfc = strtoupper(trim($company->rfc));
+
+            if ($rfcEmisor === $miRfc) {
+                // Nosotros la emitimos = INGRESO
+                // (Mantenemos el tipo I o lo forzamos por seguridad)
+                $parsedData['type'] = 'I';
+                $mensajeExito = 'Ingreso (Venta) registrado correctamente.';
+            } elseif ($rfcReceptor === $miRfc) {
+                // A nosotros nos la cobraron = EGRESO
+                // Aquí sobrescribimos la "I" que viene en el XML del proveedor y la convertimos en "E"
+                $parsedData['type'] = 'E';
+                $mensajeExito = 'Egreso (Compra) registrado correctamente.';
+            } else {
+                // Seguro 2: El XML es de otra persona/empresa
+                return redirect()->back()->with('error', "Auditoría fallida: Esta factura pertenece a {$rfcEmisor} y {$rfcReceptor}. No coincide con el RFC de tu empresa ({$miRfc}).");
+            }
+            // -------------------------------------------------------
 
             // Regla de Negocio: Evitar duplicados por Folio Fiscal (UUID)
             $exists = Invoice::where('uuid', $parsedData['uuid'])->exists();
@@ -47,9 +73,9 @@ class InvoiceController extends Controller
             $parsedData['company_id'] = $company->id;
             Invoice::create($parsedData);
 
-            return redirect()->route('invoices.index')->with('success', 'Factura procesada y guardada correctamente.');
+            return redirect()->route('invoices.index')->with('success', $mensajeExito);
         } catch (\Exception $e) {
-            // Si el servicio detecta que no es del SAT, atrapamos el error aquí
+            // Si el servicio detecta que no es del SAT o algo falla, lo atrapamos
             return redirect()->back()->with('error', 'Error al procesar el archivo: ' . $e->getMessage());
         }
     }

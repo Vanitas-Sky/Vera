@@ -64,6 +64,11 @@ class DashboardController extends Controller
             $mensajeSemaforo = 'Atención: Tu margen de utilidad es alto. Monitorea tus compras y gastos antes del cierre mensual.';
         }
 
+        // ---> CORRECCIÓN AQUÍ: Obtenemos TODO el historial ordenado para la tabla <---
+        $invoices = \App\Models\Invoice::where('company_id', $company->id)
+            ->orderBy('issue_date', 'desc')
+            ->get();
+
         return view('dashboard', compact(
             'totalIncome',
             'totalIncomeIva',
@@ -78,7 +83,8 @@ class DashboardController extends Controller
             'mensajeSemaforo',
             'projectedOpex',
             'missingInvoicesAmount',
-            'subtotalExpense'
+            'subtotalExpense',
+            'invoices' // ---> INYECTAMOS LA VARIABLE A LA VISTA <---
         ));
     }
 }
