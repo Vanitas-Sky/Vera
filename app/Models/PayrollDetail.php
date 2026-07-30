@@ -27,9 +27,11 @@ class PayrollDetail extends Model
         'net_salary' => 'decimal:2',
     ];
 
-    public function payrollPeriod()
+    // CORRECCIÓN: El método debe llamarse 'period' para coincidir con el Controlador y la Vista.
+    // Le pasamos 'payroll_period_id' para que Laravel no intente buscar una columna llamada 'period_id'.
+    public function period()
     {
-        return $this->belongsTo(PayrollPeriod::class);
+        return $this->belongsTo(PayrollPeriod::class, 'payroll_period_id');
     }
 
     public function employee()

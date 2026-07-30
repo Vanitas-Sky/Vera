@@ -59,7 +59,7 @@ class PayrollController extends Controller
         // 2. Iniciamos el blindaje de la base de datos
         DB::beginTransaction();
 
-       try {
+        try {
             // 1. Creamos el periodo (Inicializando los totales en 0 para evitar error de nulos)
             $periodName = 'Nómina - ' . ucfirst(now()->translatedFormat('F Y'));
 
@@ -76,7 +76,10 @@ class PayrollController extends Controller
             ]);
 
             // Variables para acumular el dinero
-            $sumGross = 0; $sumIsr = 0; $sumImss = 0; $sumNet = 0;
+            $sumGross = 0;
+            $sumIsr = 0;
+            $sumImss = 0;
+            $sumNet = 0;
 
             // 2. Calculamos los recibos y vamos sumando
             foreach ($employees as $employee) {
@@ -120,10 +123,10 @@ class PayrollController extends Controller
     public function show($id, PayrollCalculatorService $payrollService)
     {
         $company = Auth::user()->companies()->first();
-        
+
         $period = PayrollPeriod::where('company_id', $company->id)
-                               ->with(['details.employee'])
-                               ->findOrFail($id);
+            ->with(['details.employee'])
+            ->findOrFail($id);
 
         // Inyectamos la memoria de cálculo dinámicamente a cada recibo
         foreach ($period->details as $detail) {
@@ -131,5 +134,54 @@ class PayrollController extends Controller
         }
 
         return view('payrolls.show', compact('period'));
+    }
+
+    public function destroy($id)
+    {
+        $company = Auth::user()->companies()->first();
+
+        // Aseguramos que el periodo pertenezca a la empresa actual
+        $period = PayrollPeriod::where('company_id', $company->id)->findOrFail($id);
+
+        try {
+            DB::beginTransaction();
+
+            // 1. Borramos los detalles (recibos de los empleados)
+            $period->details()->delete();
+
+            // 2. Borramos el periodo central
+            $period->delete();
+
+            DB::commit();
+
+            return redirect()->route('payrolls.index')->with('success', 'Nómina eliminada correctamente. El mes ha quedado liberado para un nuevo cálculo.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Error al intentar eliminar la nómina: ' . $e->getMessage());
+        }
+    }
+
+    public function downloadReceiptPdf($id, PayrollCalculatorService $payrollService)
+    {
+        $company = Auth::user()->companies()->first();
+
+        // Buscamos el recibo asegurándonos de que la nómina pertenezca a la empresa logueada
+        $detail = PayrollDetail::whereHas('period', function ($query) use ($company) {
+            $query->where('company_id', $company->id);
+        })->with(['employee', 'period'])->findOrFail($id);
+
+        // Calculamos el desglose para mostrar la retención en el PDF
+        $isrBreakdown = $payrollService->getIsrBreakdown($detail->gross_salary);
+
+        // Generamos un QR simulado (Igual que en las facturas)
+        $selloSimulado = "x8Yz9==";
+        $urlSat = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=SIMULADO-NOMINA-{$detail->id}&re={$company->rfc}&rr={$detail->employee->rfc}";
+        $qrCode = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(120)->margin(0)->generate($urlSat));
+
+        // Cargamos la vista de dompdf
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payrolls.pdf', compact('company', 'detail', 'isrBreakdown', 'qrCode'));
+
+        // Descargamos el archivo
+        return $pdf->download('Recibo_Nomina_' . $detail->employee->rfc . '_' . $detail->period->start_date->format('mY') . '.pdf');
     }
 }
