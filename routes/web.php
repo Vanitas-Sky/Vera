@@ -52,6 +52,7 @@ Route::middleware(['auth', 'verified', EnsureUserHasCompany::class])->group(func
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
     Route::get('/invoices/{id}', [InvoiceController::class, 'show'])->name('invoices.show');
+    Route::post('/invoices/{id}/cancel', [\App\Http\Controllers\InvoiceController::class, 'cancel'])->name('invoices.cancel');
 
     // Rutas de Perfil Fiscal de la Empresa
     Route::get('/company/profile', [CompanyProfileController::class, 'edit'])->name('company.profile');

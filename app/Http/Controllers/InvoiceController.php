@@ -107,4 +107,14 @@ class InvoiceController extends Controller
 
         return view('invoices.show', compact('invoice', 'evaluatedItems'));
     }
+
+    public function cancel($id)
+    {
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
+        $invoice = Invoice::where('company_id', $company->id)->findOrFail($id);
+
+        $invoice->update(['is_canceled' => true]);
+
+        return redirect()->back()->with('success', 'Factura cancelada correctamente. Ya no afectará tus métricas fiscales.');
+    }
 }

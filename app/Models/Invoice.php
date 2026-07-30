@@ -29,7 +29,8 @@ class Invoice extends Model
         'metodo_pago',
         'forma_pago',
         'uso_cfdi',
-        'items'
+        'items',
+        'is_canceled'
     ];
 
     protected $casts = [

@@ -25,10 +25,8 @@
                 <form action="{{ route('invoices.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="flex items-center justify-center w-full">
-                        <!-- Añadimos 'relative' al contenedor principal -->
                         <label for="xml_file" class="relative flex flex-col items-center justify-center w-full h-40 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition overflow-hidden">
 
-                            <!-- 'pointer-events-none' evita que los textos bloqueen el archivo al soltarlo -->
                             <div class="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
                                 <svg class="w-8 h-8 mb-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -37,7 +35,6 @@
                                 <p class="text-xs text-slate-400">Solo archivos XML del SAT (CFDI 3.3 o 4.0)</p>
                             </div>
 
-                            <!-- El input ahora abarca todo el cuadro, pero es invisible -->
                             <input id="xml_file" name="xml_file" type="file" accept=".xml" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="this.form.submit()" title="Arrastra tu factura aquí" />
 
                         </label>
@@ -57,14 +54,15 @@
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-vera-gray uppercase tracking-wider">Fecha / Tipo</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-vera-gray uppercase tracking-wider">Emisor</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-vera-gray uppercase tracking-wider">Receptor</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-vera-gray uppercase tracking-wider">Concepto Principal</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-vera-gray uppercase tracking-wider">Estado</th>
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-vera-gray uppercase tracking-wider">Total (IVA inc.)</th>
-                                <!-- En el thead agrega -->
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-vera-gray uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-slate-200">
                             @forelse ($invoices as $invoice)
-                            <tr>
+                            <tr class="{{ $invoice->is_canceled ? 'opacity-60 bg-slate-50' : 'hover:bg-slate-50 transition' }}">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-vera-gray">
                                     <div class="font-medium text-vera-dark">{{ $invoice->issue_date->format('d/m/Y') }}</div>
                                     <div>
@@ -77,23 +75,50 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600" title="{{ $invoice->issuer_name }}">
                                     {{ $invoice->issuer_rfc }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600" title="{{ $invoice->receiver_name }}">
                                     {{ $invoice->receiver_rfc }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-vera-dark">
+                                
+                                <!-- Nueva Columna: Concepto Principal -->
+                                <td class="px-6 py-4 text-sm text-slate-600 max-w-[200px]">
+                                    @php
+                                        // Extraemos los items de forma segura
+                                        $items = is_string($invoice->items) ? json_decode($invoice->items, true) : $invoice->items;
+                                        $primerConcepto = $items[0]['descripcion'] ?? 'Sin descripción';
+                                        $totalConceptos = is_array($items) ? count($items) : 0;
+                                    @endphp
+                                    <div class="truncate font-medium text-vera-dark" title="{{ $primerConcepto }}">
+                                        {{ \Illuminate\Support\Str::limit($primerConcepto, 35) }}
+                                    </div>
+                                    @if($totalConceptos > 1)
+                                    <div class="text-[10px] text-slate-400 font-bold mt-0.5">
+                                        +{{ $totalConceptos - 1 }} concepto(s) extra
+                                    </div>
+                                    @endif
+                                </td>
+
+                                <!-- Nueva Columna: Estado -->
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    @if($invoice->is_canceled)
+                                        <span class="px-2.5 py-1 inline-flex text-[10px] font-black rounded-full bg-red-100 text-red-800 border border-red-200 shadow-sm">CANCELADA</span>
+                                    @else
+                                        <span class="px-2.5 py-1 inline-flex text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">Vigente</span>
+                                    @endif
+                                </td>
+
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-black {{ $invoice->is_canceled ? 'text-slate-400 line-through' : 'text-vera-dark' }}">
                                     ${{ number_format($invoice->total, 2) }}
                                 </td>
-                                <!-- En el tbody (dentro del tr del forelse) agrega -->
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a href="{{ route('invoices.show', $invoice->id) }}" class="text-vera-green hover:text-emerald-700 font-semibold">Ver detalles &rarr;</a>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="px-6 py-12 text-center text-sm text-vera-gray">
+                                <td colspan="7" class="px-6 py-12 text-center text-sm text-vera-gray">
                                     Aún no has subido ninguna factura. Arrastra tu primer XML en la zona superior.
                                 </td>
                             </tr>
