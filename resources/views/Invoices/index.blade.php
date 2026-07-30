@@ -20,7 +20,7 @@
             </div>
             @endif
 
-            <!-- Formulario de Subida -->
+            <!-- Formulario de Subida (Modificado para aceptar ZIP y XML) -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6">
                 <form action="{{ route('invoices.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
@@ -31,11 +31,12 @@
                                 <svg class="w-8 h-8 mb-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                 </svg>
-                                <p class="mb-2 text-sm text-slate-500"><span class="font-semibold text-vera-green">Haz clic para subir</span> o arrastra y suelta tu archivo aquí</p>
-                                <p class="text-xs text-slate-400">Solo archivos XML del SAT (CFDI 3.3 o 4.0)</p>
+                                <p class="mb-2 text-sm text-slate-500"><span class="font-semibold text-vera-green">Haz clic para subir</span> o arrastra tu archivo aquí</p>
+                                <p class="text-xs text-slate-400">Sube un archivo XML individual o un paquete <b>.ZIP</b> con múltiples facturas</p>
                             </div>
 
-                            <input id="xml_file" name="xml_file" type="file" accept=".xml" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="this.form.submit()" title="Arrastra tu factura aquí" />
+                            <!-- Cambiamos accept para permitir .zip -->
+                            <input id="xml_file" name="xml_file" type="file" accept=".xml,.zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="this.form.submit()" title="Arrastra tu archivo aquí" />
 
                         </label>
                     </div>
