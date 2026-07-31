@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified', EnsureUserHasCompany::class])->group(func
     Route::get('/payrolls/{id}', [PayrollController::class, 'show'])->name('payrolls.show');
     Route::delete('/payrolls/{id}', [\App\Http\Controllers\PayrollController::class, 'destroy'])->name('payrolls.destroy');
     Route::get('/payrolls/receipt/{id}/pdf', [\App\Http\Controllers\PayrollController::class, 'downloadReceiptPdf'])->name('payrolls.receipt.pdf');
+    Route::post('/payrolls/{id}/send-emails', [PayrollController::class, 'sendMassiveEmails'])->name('payrolls.send_emails');
 
     // Rutas de Facturas (XML)
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
@@ -63,6 +64,9 @@ Route::middleware(['auth', 'verified', EnsureUserHasCompany::class])->group(func
     Route::get('/opex', [FixedExpenseController::class, 'index'])->name('opex.index');
     Route::get('/opex/create', [FixedExpenseController::class, 'create'])->name('opex.create');
     Route::post('/opex', [FixedExpenseController::class, 'store'])->name('opex.store');
+    Route::get('/opex/{id}/edit', [\App\Http\Controllers\FixedExpenseController::class, 'edit'])->name('opex.edit');
+    Route::put('/opex/{id}', [\App\Http\Controllers\FixedExpenseController::class, 'update'])->name('opex.update');
+    Route::patch('/opex/{id}/toggle', [\App\Http\Controllers\FixedExpenseController::class, 'toggleStatus'])->name('opex.toggle');
 
     Route::get('/billing/create', [BillingController::class, 'create'])->name('billing.create');
     Route::post('/billing', [BillingController::class, 'store'])->name('billing.store');

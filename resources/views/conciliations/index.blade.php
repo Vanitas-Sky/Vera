@@ -76,6 +76,63 @@
 
             </div>
 
+            <!-- Buscador y Filtros Bancarios (Live Search) -->
+            <form method="GET" action="{{ route('conciliations.index') }}" id="searchForm" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-end">
+                
+                <!-- Mantener el filtro de periodo oculto para que no se pierda al buscar texto -->
+                <input type="hidden" name="period" value="{{ $period }}">
+
+                <!-- Buscador de Texto (Concepto) -->
+                <div class="flex-1 w-full">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar Concepto Bancario</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <input type="text" name="search" id="searchInput" value="{{ request('search') }}" placeholder="Ej. Amazon, Comisión, Gasolina..." 
+                            class="w-full pl-10 border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm transition">
+                    </div>
+                </div>
+
+                <!-- Filtro de Tipo de Movimiento -->
+                <div class="w-full sm:w-48">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Movimiento</label>
+                    <select name="type" id="typeSelect" class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm cursor-pointer">
+                        <option value="todos" {{ request('type') == 'todos' ? 'selected' : '' }}>Todos (Estado de Cuenta)</option>
+                        <option value="retiros" {{ request('type') == 'retiros' ? 'selected' : '' }}>Solo Retiros (Gastos)</option>
+                        <option value="depositos" {{ request('type') == 'depositos' ? 'selected' : '' }}>Solo Depósitos (Ingresos)</option>
+                    </select>
+                </div>
+
+                <!-- Botón Limpiar -->
+                <div class="flex gap-2 w-full sm:w-auto">
+                    @if(request('search') || request('type', 'todos') != 'todos')
+                        <a href="{{ route('conciliations.index', ['period' => $period]) }}" class="px-4 py-2.5 bg-white border border-slate-300 text-red-600 font-bold rounded-md hover:bg-red-50 transition shadow-sm text-sm flex items-center">
+                            X Limpiar
+                        </a>
+                    @endif
+                </div>
+            </form>
+
+            <!-- Motor Javascript de Live Search (Debounce) -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const form = document.getElementById('searchForm');
+                    const searchInput = document.getElementById('searchInput');
+                    const typeSelect = document.getElementById('typeSelect');
+                    let timeout = null;
+
+                    function submitForm() { form.submit(); }
+
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(submitForm, 600); 
+                    });
+
+                    typeSelect.addEventListener('change', submitForm);
+                });
+            </script>
+
             <!-- Tabla de Transacciones -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
@@ -111,6 +168,11 @@
                 </div>
             </div>
 
+            <!-- Paginación Bancaria -->
+            <div class="mt-6">
+                {{ $transactions->links() }}
+            </div>
+            
         </div>
     </div>
 </x-app-layout>

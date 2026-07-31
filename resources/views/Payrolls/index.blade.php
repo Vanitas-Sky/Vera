@@ -33,6 +33,36 @@
             </div>
             @endif
 
+            <!-- Filtro de Nómina -->
+            <form method="GET" action="{{ route('payrolls.index') }}" id="searchForm" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-end">
+
+                <div class="w-full sm:w-64">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Filtrar por Mes Fiscal</label>
+                    <input type="month" name="period" id="periodInput" value="{{ request('period') }}"
+                        class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm transition cursor-pointer">
+                </div>
+
+                <!-- Botón Limpiar -->
+                <div class="flex gap-2 w-full sm:w-auto">
+                    @if(request('period'))
+                    <a href="{{ route('payrolls.index') }}" class="px-4 py-2.5 bg-white border border-slate-300 text-red-600 font-bold rounded-md hover:bg-red-50 transition shadow-sm text-sm flex items-center">
+                        X Limpiar
+                    </a>
+                    @endif
+                </div>
+            </form>
+
+            <!-- Motor Javascript de Auto-Filtro -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const periodInput = document.getElementById('periodInput');
+
+                    periodInput.addEventListener('change', function() {
+                        document.getElementById('searchForm').submit();
+                    });
+                });
+            </script>
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200">
@@ -72,8 +102,24 @@
                                         </svg>
                                         Ver detalles
                                     </a>
+                                    <!-- Botón Envío Masivo -->
+                                    <form action="{{ route('payrolls.send_emails', $period->id) }}" method="POST" class="inline-block form-confirm"
+                                        data-title="¿Enviar recibos por correo?"
+                                        data-text="Se enviará el PDF a todos los empleados que tengan un correo registrado."
+                                        data-confirm="Sí, enviar masivamente">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-blue-600 transition hover:bg-blue-600 hover:text-white">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Enviar Recibos
+                                        </button>
+                                    </form>
                                     <!-- Botón Eliminar / Recalcular -->
-                                    <form action="{{ route('payrolls.destroy', $period->id) }}" method="POST" class="inline-block ml-2" onsubmit="return confirm('¿Estás seguro de eliminar esta nómina? Esto borrará los recibos de todos los empleados y te permitirá volver a calcular el mes.');">
+                                    <form action="{{ route('payrolls.destroy', $period->id) }}" method="POST" class="inline-block ml-2 form-confirm"
+                                        data-title="¿Eliminar el cálculo de este mes?"
+                                        data-text="Esto borrará los recibos de todos los empleados y te permitirá volver a calcular la nómina desde cero."
+                                        data-confirm="Sí, eliminar nómina">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="inline-flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-red-600 transition hover:bg-red-600 hover:text-white">
@@ -96,6 +142,12 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Paginación -->
+            <div class="mt-6">
+                {{ $periods->links() }}
+            </div>
+
         </div>
     </div>
 </x-app-layout>

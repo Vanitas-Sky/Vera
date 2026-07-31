@@ -9,26 +9,28 @@ use Carbon\Carbon;
 
 class FixedExpenseController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $company = Auth::user()->companies()->first();
-        
-        $expenses = FixedExpense::where('company_id', $company->id)
-                                ->where('is_active', true)
-                                ->orderBy('due_day')
-                                ->get();
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
 
-        $totalMonthlyOpex = $expenses->sum('monthly_amount');
+        // ==========================================
+        // VÍA A: MATEMÁTICA Y ALERTAS GLOBALES
+        // ==========================================
+        // Solo traemos los activos para los cálculos reales, sin importar la página
+        $activeExpenses = \App\Models\FixedExpense::where('company_id', $company->id)
+            ->where('is_active', true)
+            ->get();
 
-        // Módulo 1: Sistema de Alertas y Vencimientos
+        $totalMonthlyOpex = $activeExpenses->sum('monthly_amount');
+
         $alerts = [];
-        $today = Carbon::now();
+        $today = \Carbon\Carbon::now();
 
-        foreach ($expenses as $expense) {
-            // 1. Alerta de Vencimiento de Contrato / Póliza (Próximos 60 días)
+        foreach ($activeExpenses as $expense) {
+            // 1. Alerta de Vencimiento de Contrato / Póliza
             if ($expense->contract_end_date) {
                 $daysToRenew = $today->diffInDays($expense->contract_end_date, false);
-                
+
                 if ($daysToRenew > 0 && $daysToRenew <= 60) {
                     $alerts[] = [
                         'type' => 'warning',
@@ -44,10 +46,10 @@ class FixedExpenseController extends Controller
                 }
             }
 
-            // 2. Alerta de Pago Próximo (Próximos 5 días del mes actual)
+            // 2. Alerta de Pago Próximo
             $currentDay = $today->day;
             $daysToPay = $expense->due_day - $currentDay;
-            
+
             if ($daysToPay >= 0 && $daysToPay <= 5) {
                 $alerts[] = [
                     'type' => 'info',
@@ -57,7 +59,42 @@ class FixedExpenseController extends Controller
             }
         }
 
-        return view('expenses.fixed.index', compact('expenses', 'totalMonthlyOpex', 'alerts'));
+        // ==========================================
+        // VÍA B: FILTROS Y PAGINACIÓN PARA LA TABLA
+        // ==========================================
+        $search = $request->input('search');
+        $category = $request->input('category', 'todas');
+        $status = $request->input('status', 'activos');
+
+        $query = \App\Models\FixedExpense::where('company_id', $company->id);
+
+        // Filtro Estatus
+        if ($status === 'activos') {
+            $query->where('is_active', true);
+        } elseif ($status === 'inactivos') {
+            $query->where('is_active', false);
+        }
+
+        // Filtro Categoría
+        if ($category !== 'todas') {
+            $query->where('category', $category);
+        }
+
+        // Buscador de Texto (Proveedor o Descripción)
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('provider_name', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Paginación conservando la URL
+        $expenses = $query->orderBy('is_active', 'desc')
+            ->orderBy('due_day')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('expenses.fixed.index', compact('expenses', 'totalMonthlyOpex', 'alerts', 'search', 'category', 'status'));
     }
 
     public function create()
@@ -81,7 +118,7 @@ class FixedExpenseController extends Controller
         ]);
 
         $company = Auth::user()->companies()->first();
-        
+
         // Inyectamos valores por defecto antes de guardar
         $validated['company_id'] = $company->id;
         $validated['is_active'] = true;
@@ -89,5 +126,52 @@ class FixedExpenseController extends Controller
         FixedExpense::create($validated);
 
         return redirect()->route('opex.index')->with('success', 'Contrato o póliza registrada exitosamente.');
+    }
+
+    // Mostrar el formulario de edición
+    public function edit($id)
+    {
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
+
+        // Bloqueo de seguridad: solo trae el contrato si pertenece a esta empresa
+        $expense = \App\Models\FixedExpense::where('company_id', $company->id)->findOrFail($id);
+
+        return view('expenses.fixed.edit', compact('expense'));
+    }
+
+    // Guardar los cambios del formulario
+    public function update(\Illuminate\Http\Request $request, $id)
+    {
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
+        $expense = \App\Models\FixedExpense::where('company_id', $company->id)->findOrFail($id);
+
+        $request->validate([
+            'provider_name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'category' => 'required|string',
+            'due_day' => 'required|integer|min:1|max:31',
+            'monthly_amount' => 'required|numeric|min:0',
+            'contract_start_date' => 'nullable|date',
+            'contract_end_date' => 'nullable|date|after_or_equal:contract_start_date',
+        ]);
+
+        $expense->update($request->all());
+
+        return redirect()->route('opex.index')->with('success', 'El contrato se ha actualizado correctamente.');
+    }
+
+    // Cambiar el estatus (Baja Lógica / Reactivación)
+    public function toggleStatus($id)
+    {
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
+        $expense = \App\Models\FixedExpense::where('company_id', $company->id)->findOrFail($id);
+
+        // Invertimos el estatus actual
+        $expense->is_active = !$expense->is_active;
+        $expense->save();
+
+        $status = $expense->is_active ? 'reactivado' : 'dado de baja';
+
+        return redirect()->route('opex.index')->with('success', "El contrato ha sido {$status} correctamente.");
     }
 }

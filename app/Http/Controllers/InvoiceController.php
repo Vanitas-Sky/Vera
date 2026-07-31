@@ -10,18 +10,52 @@ use Illuminate\Support\Facades\Auth;
 
 class InvoiceController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $company = Auth::user()->companies()->first();
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
 
-        // Traemos las facturas ordenadas por fecha de emisión
-        $invoices = Invoice::where('company_id', $company->id)
-            ->orderBy('issue_date', 'desc')
-            ->get();
+        if (!$company) {
+            return redirect()->route('companies.create')->with('error', 'Registra tu empresa primero.');
+        }
 
-        return view('invoices.index', compact('invoices'));
+        $search = $request->input('search');
+        $status = $request->input('status', 'activas');
+        $type = $request->input('type', 'todas'); // Nuevo filtro
+
+        $query = \App\Models\Invoice::where('company_id', $company->id);
+
+        // Filtro de Estatus
+        if ($status === 'canceladas') {
+            $query->where('is_canceled', true);
+        } elseif ($status === 'activas') {
+            $query->where('is_canceled', false);
+        }
+
+        // Filtro de Tipo
+        if ($type === 'I' || $type === 'E') {
+            $query->where('type', $type);
+        }
+
+        // Búsqueda Profunda (Live Search)
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('issuer_name', 'LIKE', "%{$search}%")
+                    ->orWhere('receiver_name', 'LIKE', "%{$search}%")
+                    ->orWhere('issuer_rfc', 'LIKE', "%{$search}%")
+                    ->orWhere('receiver_rfc', 'LIKE', "%{$search}%")
+                    ->orWhere('uuid', 'LIKE', "%{$search}%")
+                    ->orWhere('items', 'LIKE', "%{$search}%") // Busca en los conceptos
+                    ->orWhere('issue_date', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Paginación con persistencia de URL
+        $invoices = $query->orderBy('issue_date', 'desc')
+            ->paginate(10)
+            ->withQueryString(); // Esto ancla los filtros a la paginación
+
+        return view('invoices.index', compact('invoices', 'search', 'status', 'type'));
     }
-
     public function store(Request $request, \App\Services\XmlParserService $parser)
     {
         $company = Auth::user()->companies()->first();

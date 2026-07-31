@@ -58,6 +58,79 @@
                 </div>
             </div>
 
+            <!-- Buscador y Filtros (Live Search) -->
+            <form method="GET" action="{{ route('opex.index') }}" id="searchForm" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-end">
+
+                <!-- Buscador de Texto -->
+                <div class="flex-1 w-full">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar Proveedor o Concepto</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text" name="search" id="searchInput" value="{{ request('search') }}" placeholder="Escribe para buscar..."
+                            class="w-full pl-10 border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm transition">
+                    </div>
+                </div>
+
+                <!-- Filtro de Categoría -->
+                <div class="w-full sm:w-40">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Categoría</label>
+                    <select name="category" id="categorySelect" class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm cursor-pointer">
+                        <option value="todas" {{ request('category') == 'todas' ? 'selected' : '' }}>Todas</option>
+                        <option value="Renta" {{ request('category') == 'Renta' ? 'selected' : '' }}>Renta</option>
+                        <option value="Seguros" {{ request('category') == 'Seguros' ? 'selected' : '' }}>Seguros</option>
+                        <option value="Servicios" {{ request('category') == 'Servicios' ? 'selected' : '' }}>Servicios</option>
+                        <option value="Software" {{ request('category') == 'Software' ? 'selected' : '' }}>Software</option>
+                        <option value="Otro" {{ request('category') == 'Otro' ? 'selected' : '' }}>Otro</option>
+                    </select>
+                </div>
+
+                <!-- Filtro de Estatus -->
+                <div class="w-full sm:w-40">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estatus</label>
+                    <select name="status" id="statusSelect" class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm cursor-pointer">
+                        <option value="activos" {{ request('status') == 'activos' ? 'selected' : '' }}>Activos</option>
+                        <option value="inactivos" {{ request('status') == 'inactivos' ? 'selected' : '' }}>Dados de baja</option>
+                        <option value="todos" {{ request('status') == 'todos' ? 'selected' : '' }}>Histórico (Todos)</option>
+                    </select>
+                </div>
+
+                <!-- Botón Limpiar -->
+                <div class="flex gap-2 w-full sm:w-auto">
+                    @if(request('search') || request('status', 'activos') != 'activos' || request('category', 'todas') != 'todas')
+                    <a href="{{ route('opex.index') }}" class="px-4 py-2.5 bg-white border border-slate-300 text-red-600 font-bold rounded-md hover:bg-red-50 transition shadow-sm text-sm flex items-center">
+                        X Limpiar
+                    </a>
+                    @endif
+                </div>
+            </form>
+
+            <!-- Motor Javascript de Live Search (Debounce) -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const form = document.getElementById('searchForm');
+                    const searchInput = document.getElementById('searchInput');
+                    const categorySelect = document.getElementById('categorySelect');
+                    const statusSelect = document.getElementById('statusSelect');
+                    let timeout = null;
+
+                    function submitForm() {
+                        form.submit();
+                    }
+
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(submitForm, 600);
+                    });
+
+                    categorySelect.addEventListener('change', submitForm);
+                    statusSelect.addEventListener('change', submitForm);
+                });
+            </script>
+
             <!-- Tabla de Contratos Activos -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
@@ -72,6 +145,8 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Día de Pago</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Monto Mensual</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Vigencia Contrato</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Estatus</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-sm">
@@ -97,6 +172,36 @@
                                         {{ $expense->contract_end_date ? $expense->contract_end_date->format('d/m/Y') : 'Indefinido' }}
                                     </span>
                                 </td>
+                                <td class="px-6 py-4 text-center">
+                                    @if($expense->is_active)
+                                    <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Activo</span>
+                                    @else
+                                    <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Inactivo</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center items-center gap-3">
+                                        <!-- Botón Editar -->
+                                        <a href="{{ route('opex.edit', $expense->id) }}" class="text-blue-600 hover:text-blue-900 font-bold text-xs uppercase transition">
+                                            Editar
+                                        </a>
+
+                                        <span class="text-slate-200">|</span>
+
+                                        <!-- Botón Dar de Baja / Reactivar -->
+                                        <!-- Para Dar de Baja un Contrato -->
+                                        <form action="{{ route('opex.toggle', $expense->id) }}" method="POST" class="inline-block form-confirm"
+                                            data-title="{{ $expense->is_active ? '¿Dar de baja el contrato?' : '¿Reactivar el contrato?' }}"
+                                            data-text="{{ $expense->is_active ? 'Ya no se contabilizará en tu OpEx mensual proyectado.' : 'Volverá a aparecer en tu presupuesto.' }}"
+                                            data-confirm="Sí, proceder">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="font-bold text-xs uppercase transition {{ $expense->is_active ? 'text-red-600 hover:text-red-900' : 'text-emerald-600 hover:text-emerald-900' }}">
+                                                {{ $expense->is_active ? 'Dar de Baja' : 'Reactivar' }}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
                             @empty
                             <tr>
@@ -108,6 +213,10 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+            <!-- Paginación Inteligente -->
+            <div class="mt-6">
+                {{ $expenses->links() }}
             </div>
 
         </div>
