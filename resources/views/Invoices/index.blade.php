@@ -46,6 +46,79 @@
                 </form>
             </div>
 
+            <!-- Buscador y Filtros Inteligentes (Live Search) -->
+            <form method="GET" action="{{ route('invoices.index') }}" id="searchForm" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-end">
+
+                <!-- Buscador Profundo -->
+                <div class="flex-1 w-full">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar (Nombre, RFC, UUID, Concepto)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text" name="search" id="searchInput" value="{{ request('search') }}" placeholder="Escribe para filtrar automáticamente..."
+                            class="w-full pl-10 border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm transition">
+                    </div>
+                </div>
+
+                <!-- Filtro de Tipo -->
+                <div class="w-full sm:w-40">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo</label>
+                    <select name="type" id="typeSelect" class="w-full border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm cursor-pointer">
+                        <option value="todas" {{ request('type') == 'todas' ? 'selected' : '' }}>Todos</option>
+                        <option value="I" {{ request('type') == 'I' ? 'selected' : '' }}>Ingresos</option>
+                        <option value="E" {{ request('type') == 'E' ? 'selected' : '' }}>Egresos</option>
+                    </select>
+                </div>
+
+                <!-- Filtro de Estatus -->
+                <div class="w-full sm:w-40">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estatus SAT</label>
+                    <select name="status" id="statusSelect" class="w-full border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm cursor-pointer">
+                        <option value="activas" {{ request('status') == 'activas' ? 'selected' : '' }}>Válidas</option>
+                        <option value="canceladas" {{ request('status') == 'canceladas' ? 'selected' : '' }}>Canceladas</option>
+                        <option value="todas" {{ request('status') == 'todas' ? 'selected' : '' }}>Histórico</option>
+                    </select>
+                </div>
+
+                <!-- Botón Limpiar -->
+                <div class="flex gap-2 w-full sm:w-auto">
+                    @if(request('search') || request('status', 'activas') != 'activas' || request('type', 'todas') != 'todas')
+                    <a href="{{ route('invoices.index') }}" class="px-4 py-2.5 bg-white border border-slate-300 text-red-600 font-bold rounded-md hover:bg-red-50 transition shadow-sm text-sm flex items-center">
+                        X Limpiar
+                    </a>
+                    @endif
+                </div>
+            </form>
+
+            <!-- Motor Javascript de Live Search (Debounce) -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const form = document.getElementById('searchForm');
+                    const searchInput = document.getElementById('searchInput');
+                    const typeSelect = document.getElementById('typeSelect');
+                    const statusSelect = document.getElementById('statusSelect');
+                    let timeout = null;
+
+                    // Función que envía el formulario
+                    function submitForm() {
+                        form.submit();
+                    }
+
+                    // Escuchar escritura en el buscador con retraso de 600ms (Debounce)
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(submitForm, 600);
+                    });
+
+                    // Escuchar cambios inmediatos en los selects
+                    typeSelect.addEventListener('change', submitForm);
+                    statusSelect.addEventListener('change', submitForm);
+                });
+            </script>
+
             <!-- Tabla de Resultados -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200">
                 <div class="overflow-x-auto">
@@ -82,14 +155,14 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600" title="{{ $invoice->receiver_name }}">
                                     {{ $invoice->receiver_rfc }}
                                 </td>
-                                
+
                                 <!-- Nueva Columna: Concepto Principal -->
                                 <td class="px-6 py-4 text-sm text-slate-600 max-w-[200px]">
                                     @php
-                                        // Extraemos los items de forma segura
-                                        $items = is_string($invoice->items) ? json_decode($invoice->items, true) : $invoice->items;
-                                        $primerConcepto = $items[0]['descripcion'] ?? 'Sin descripción';
-                                        $totalConceptos = is_array($items) ? count($items) : 0;
+                                    // Extraemos los items de forma segura
+                                    $items = is_string($invoice->items) ? json_decode($invoice->items, true) : $invoice->items;
+                                    $primerConcepto = $items[0]['descripcion'] ?? 'Sin descripción';
+                                    $totalConceptos = is_array($items) ? count($items) : 0;
                                     @endphp
                                     <div class="truncate font-medium text-vera-dark" title="{{ $primerConcepto }}">
                                         {{ \Illuminate\Support\Str::limit($primerConcepto, 35) }}
@@ -104,9 +177,9 @@
                                 <!-- Nueva Columna: Estado -->
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     @if($invoice->is_canceled)
-                                        <span class="px-2.5 py-1 inline-flex text-[10px] font-black rounded-full bg-red-100 text-red-800 border border-red-200 shadow-sm">CANCELADA</span>
+                                    <span class="px-2.5 py-1 inline-flex text-[10px] font-black rounded-full bg-red-100 text-red-800 border border-red-200 shadow-sm">CANCELADA</span>
                                     @else
-                                        <span class="px-2.5 py-1 inline-flex text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">Vigente</span>
+                                    <span class="px-2.5 py-1 inline-flex text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">Vigente</span>
                                     @endif
                                 </td>
 
@@ -127,6 +200,11 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Paginación Inteligente -->
+            <div class="mt-6">
+                {{ $invoices->links() }}
             </div>
 
         </div>

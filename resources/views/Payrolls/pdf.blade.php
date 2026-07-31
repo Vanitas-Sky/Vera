@@ -191,20 +191,38 @@
     <!-- Datos de Patrón y Empleado -->
     <table class="layout-table">
         <tr>
+            <!-- Columna Izquierda: El Patrón (Empresa) -->
             <td style="width: 48%; padding-right: 2%;">
                 <div class="info-title">Datos del Patrón (Emisor)</div>
                 <div class="info-value">{{ $company->legal_name ?? 'Empresa S.A. de C.V.' }}</div>
                 <p class="info-text"><strong>RFC:</strong> {{ $company->rfc ?? 'XAXX010101000' }}</p>
                 <p class="info-text"><strong>Régimen Fiscal:</strong> {{ $company->tax_regime_code ?? '601 - General de Ley Personas Morales' }}</p>
                 <p class="info-text"><strong>Lugar de Expedición (C.P.):</strong> {{ $company->zip_code ?? '29950' }}</p>
+                <p class="info-text"><strong>Registro Patronal IMSS:</strong> No capturado</p>
             </td>
+
+            <!-- Columna Derecha: El Empleado (Receptor) -->
             <td style="width: 48%; padding-left: 2%;">
                 <div class="info-title">Datos del Empleado (Receptor)</div>
                 <div class="info-value">{{ $detail->employee->full_name }}</div>
-                <p class="info-text"><strong>RFC:</strong> {{ $detail->employee->rfc }}</p>
-                <p class="info-text"><strong>NSS:</strong> {{ $detail->employee->nss }}</p>
-                <p class="info-text"><strong>Domicilio Fiscal (C.P.):</strong> {{ $company->zip_code ?? '29950' }}</p>
-                <p class="info-text"><strong>Uso de CFDI:</strong> CN01 - Nómina</p>
+
+                <!-- Tabla anidada para dividir los datos del empleado a dos mini-columnas para ahorrar espacio -->
+                <table style="width: 100%; border-collapse: collapse; margin-top: 3px;">
+                    <tr>
+                        <td style="width: 50%; vertical-align: top;">
+                            <p class="info-text"><strong>RFC:</strong> {{ $detail->employee->rfc }}</p>
+                            <p class="info-text"><strong>CURP:</strong> {{ $detail->employee->curp }}</p>
+                            <p class="info-text"><strong>NSS:</strong> {{ $detail->employee->nss }}</p>
+                            <p class="info-text"><strong>Puesto:</strong> {{ $detail->employee->position ?? 'No especificado' }}</p>
+                        </td>
+                        <td style="width: 50%; vertical-align: top;">
+                            <p class="info-text"><strong>C.P. Fiscal:</strong> {{ $company->zip_code ?? '29950' }}</p>
+                            <p class="info-text"><strong>Uso CFDI:</strong> CN01 - Nómina</p>
+                            <p class="info-text"><strong>Ingreso:</strong> {{ $detail->employee->hire_date ? \Carbon\Carbon::parse($detail->employee->hire_date)->format('d/m/Y') : 'No capturada' }}</p>
+                            <p class="info-text"><strong>CLABE:</strong> {{ $detail->employee->clabe ?? 'No capturada' }}</p>
+                        </td>
+                    </tr>
+                </table>
             </td>
         </tr>
     </table>
@@ -225,7 +243,12 @@
         <tr>
             <td style="width: 48%; vertical-align: top; padding-right: 2%;">
                 <table class="calc-table">
-                    <thead><tr><th>PERCEPCIONES</th><th class="text-right">IMPORTE</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>PERCEPCIONES</th>
+                            <th class="text-right">IMPORTE</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         <tr>
                             <td>Sueldo Base (Mensual)</td>
@@ -236,7 +259,12 @@
             </td>
             <td style="width: 48%; vertical-align: top; padding-left: 2%;">
                 <table class="calc-table">
-                    <thead><tr><th>DEDUCCIONES</th><th class="text-right">IMPORTE</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>DEDUCCIONES</th>
+                            <th class="text-right">IMPORTE</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         @if(!$isrBreakdown['is_minimum_wage'])
                         <tr>
@@ -274,12 +302,12 @@
             <!-- Columna del QR -->
             <td style="width: 25%; text-align: center; vertical-align: top;">
                 @if(isset($qrCode))
-                    <img src="data:image/svg+xml;base64,{{ $qrCode }}" alt="Código QR SAT" style="width: 130px; height: 130px;">
+                <img src="data:image/svg+xml;base64,{{ $qrCode }}" alt="Código QR SAT" style="width: 130px; height: 130px;">
                 @else
-                    <div style="width: 130px; height: 130px; border: 1px solid #ccc; line-height: 130px; font-size: 10px; margin: 0 auto;">QR NO DISPONIBLE</div>
+                <div style="width: 130px; height: 130px; border: 1px solid #ccc; line-height: 130px; font-size: 10px; margin: 0 auto;">QR NO DISPONIBLE</div>
                 @endif
             </td>
-            
+
             <!-- Columna de los Sellos -->
             <td style="width: 75%; vertical-align: top; padding-left: 15px;">
                 <div style="font-size: 8px; margin-bottom: 5px;">
@@ -304,4 +332,5 @@
     </div>
 
 </body>
+
 </html>

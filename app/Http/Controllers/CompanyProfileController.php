@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Company;
+use App\Rules\ValidRfc;
 
 class CompanyProfileController extends Controller
 {
@@ -35,8 +36,8 @@ class CompanyProfileController extends Controller
         $validated = $request->validate([
             'legal_name' => 'required|string|max:255',
             'trade_name' => 'nullable|string|max:255',
-            'rfc' => 'required|string|size:13',
-            'postal_code' => 'required|digits:5',
+            'rfc' => ['required', 'string', new ValidRfc],
+            'postal_code' => ['required', 'string', 'regex:/^(?!00000)[0-9]{5}$/'],
             'tax_regime_code' => 'required|string|max:3',
         ]);
 

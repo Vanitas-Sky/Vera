@@ -8,6 +8,7 @@ use App\Services\PacSandboxService;
 use App\Models\Invoice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App\Rules\ValidRfc; // <-- 1. Importamos nuestra bóveda criptográfica
 
 class BillingController extends Controller
 {
@@ -54,22 +55,54 @@ class BillingController extends Controller
     {
         $company = Auth::user()->companies()->first();
 
-        // 1. Validación estricta
-        $validated = $request->validate([
-            'receptor_rfc' => ['required', 'string', 'min:12', 'max:13', 'regex:/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/i'],
+        // 1. Validación estricta y blindada
+        $rules = [
+            'receptor_rfc' => ['required', 'string', new ValidRfc], 
             'receptor_nombre' => 'required|string|max:255',
-            'receptor_cp' => 'required|digits:5',
+            'receptor_cp' => ['required', 'string', 'regex:/^(?!00000)[0-9]{5}$/'], 
             'receptor_regimen' => 'required|string|size:3',
             'uso_cfdi' => 'required|string|size:3',
             'metodo_pago' => 'required|string|size:3',
             'forma_pago' => 'required|string|size:2',
             'moneda' => 'required|string|size:3',
-            'clave_prod_serv' => 'required|digits:8',
+            'clave_prod_serv' => ['required', 'string', 'regex:/^(?!00000000)[0-9]{8}$/'], 
             'cantidad' => 'required|numeric|min:0.01',
             'descripcion' => 'required|string|max:1000',
             'valor_unitario' => 'required|numeric|min:0.01',
             'aplica_iva' => 'required|boolean',
-        ]);
+        ];
+
+        // 2. Mensajes de Error en Español
+        $messages = [
+            'required' => 'El campo :attribute es obligatorio.',
+            'string' => 'El campo :attribute debe ser texto válido.',
+            'max' => 'El campo :attribute no debe exceder :max caracteres.',
+            'min' => 'El campo :attribute debe ser de al menos :min.',
+            'size' => 'El campo :attribute debe tener exactamente :size caracteres.',
+            'numeric' => 'El campo :attribute debe ser un valor numérico.',
+            'receptor_cp.regex' => 'El Código Postal debe tener 5 dígitos y no puede ser 00000.',
+            'clave_prod_serv.regex' => 'La Clave SAT debe tener 8 dígitos y no puede ser todo ceros.'
+        ];
+
+        // 3. Diccionario de Nombres de Columnas a Nombres Humanos
+        $attributes = [
+            'receptor_rfc' => 'RFC del Cliente',
+            'receptor_nombre' => 'Nombre o Razón Social',
+            'receptor_cp' => 'Código Postal',
+            'receptor_regimen' => 'Régimen Fiscal',
+            'uso_cfdi' => 'Uso de CFDI',
+            'metodo_pago' => 'Método de Pago',
+            'forma_pago' => 'Forma de Pago',
+            'moneda' => 'Moneda',
+            'clave_prod_serv' => 'Clave de Producto/Servicio',
+            'cantidad' => 'Cantidad',
+            'descripcion' => 'Descripción',
+            'valor_unitario' => 'Valor Unitario',
+            'aplica_iva' => 'Desglose de IVA',
+        ];
+
+        // 4. Ejecutar la validación inyectando los 3 arreglos
+        $validated = $request->validate($rules, $messages, $attributes);
 
         // 2. Cálculos
         $subtotal = $validated['cantidad'] * $validated['valor_unitario'];
@@ -210,11 +243,10 @@ class BillingController extends Controller
         $invoice = Invoice::where('company_id', $company->id)->findOrFail($id);
 
         // 1. Construir la URL oficial de validación del SAT
-        // El SAT exige: UUID, RFC Emisor, RFC Receptor, Total y los últimos 8 caracteres del sello
-        $selloSimulado = "t8xZ9a=="; // Sello falso para el mock
+        $selloSimulado = "t8xZ9a==";
         $urlSat = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id={$invoice->uuid}&re={$invoice->issuer_rfc}&rr={$invoice->receiver_rfc}&tt={$invoice->total}&fe={$selloSimulado}";
 
-        // 2. Generar el QR en formato SVG y codificarlo en Base64 para que DomPDF no falle
+        // 2. Generar el QR en formato SVG y codificarlo en Base64
         $qrCode = base64_encode(QrCode::format('svg')->size(130)->margin(0)->generate($urlSat));
 
         // 3. Pasamos la factura y el QR a la vista
@@ -235,7 +267,7 @@ class BillingController extends Controller
 
         if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
 
-            // 1. Generar el contenido del XML
+            // 1. Generar el contenido del XML (Reutilizamos la lógica)
             $xmlString = '<?xml version="1.0" encoding="UTF-8"?>';
             $xmlString .= '<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" ';
             $xmlString .= 'Fecha="' . $invoice->issue_date->format('Y-m-d\TH:i:s') . '" ';
@@ -254,7 +286,7 @@ class BillingController extends Controller
             }
             $xmlString .= '</cfdi:Conceptos></cfdi:Comprobante>';
 
-            // 2. Generar el PDF en binario usando DomPDF
+            // 2. Generar el PDF en binario
             $selloSimulado = "t8xZ9a==";
             $urlSat = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id={$invoice->uuid}&re={$invoice->issuer_rfc}&rr={$invoice->receiver_rfc}&tt={$invoice->total}&fe={$selloSimulado}";
             $qrCode = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(130)->margin(0)->generate($urlSat));

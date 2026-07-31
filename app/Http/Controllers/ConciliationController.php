@@ -11,45 +11,74 @@ use Carbon\Carbon;
 
 class ConciliationController extends Controller
 {
-    // 1. Mostrar el panel principal de conciliación
-    public function index(Request $request)
+    public function index(\Illuminate\Http\Request $request)
     {
-        $company = Auth::user()->companies()->first();
-        
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
+
         if (!$company) {
             return redirect()->route('companies.create')->with('error', 'Primero debes registrar tu empresa.');
         }
 
+        // ==========================================
+        // VÍA A: MATEMÁTICA Y SEMÁFORO MENSUAL
+        // ==========================================
         $period = $request->input('period', now()->format('Y-m'));
-        
         $currentYear = (int) substr($period, 0, 4);
         $currentMonth = (int) substr($period, 5, 2);
 
-        // Total de gastos facturados en el mes (SAT)
-        $satExpenses = Invoice::where('company_id', $company->id)
+        $satExpenses = \App\Models\Invoice::where('company_id', $company->id)
             ->where('type', 'E')
             ->where('is_canceled', false)
             ->whereMonth('issue_date', $currentMonth)
             ->whereYear('issue_date', $currentYear)
             ->sum('total');
 
-        // Total de retiros en el banco
-        $bankWithdrawals = BankTransaction::where('company_id', $company->id)
+        $bankWithdrawals = \App\Models\BankTransaction::where('company_id', $company->id)
             ->whereMonth('transaction_date', $currentMonth)
             ->whereYear('transaction_date', $currentYear)
             ->sum('withdrawal');
 
-        // La matemática clave: ¿Gastó más en el banco de lo que facturó?
         $discrepancy = $bankWithdrawals - $satExpenses;
 
-        // Historial de transacciones bancarias del mes
-        $transactions = BankTransaction::where('company_id', $company->id)
-            ->whereMonth('transaction_date', $currentMonth)
-            ->whereYear('transaction_date', $currentYear)
-            ->orderBy('transaction_date', 'desc')
-            ->get();
+        // ==========================================
+        // VÍA B: FILTROS Y PAGINACIÓN PARA LA TABLA BANCARIA
+        // ==========================================
+        $search = $request->input('search');
+        $type = $request->input('type', 'todos'); // Retiros vs Depósitos
 
-        return view('conciliations.index', compact('satExpenses', 'bankWithdrawals', 'discrepancy', 'transactions', 'period'));
+        $query = \App\Models\BankTransaction::where('company_id', $company->id)
+            ->whereMonth('transaction_date', $currentMonth)
+            ->whereYear('transaction_date', $currentYear);
+
+        // Filtro de Tipo de Movimiento
+        if ($type === 'retiros') {
+            $query->where('withdrawal', '>', 0);
+        } elseif ($type === 'depositos') {
+            $query->where('deposit', '>', 0);
+        }
+
+        // Buscador de Texto Libre (Concepto o Referencia Bancaria)
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('concept', 'LIKE', "%{$search}%")
+                    ->orWhere('reference', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Paginación persistente
+        $transactions = $query->orderBy('transaction_date', 'desc')
+            ->paginate(15) // El banco suele tener más renglones, 15 es un buen número
+            ->withQueryString();
+
+        return view('conciliations.index', compact(
+            'satExpenses',
+            'bankWithdrawals',
+            'discrepancy',
+            'transactions',
+            'period',
+            'search',
+            'type'
+        ));
     }
 
     // 2. Previsualizar el CSV y extraer los encabezados
@@ -60,14 +89,14 @@ class ConciliationController extends Controller
         ]);
 
         $file = $request->file('bank_file');
-        
+
         // Guardamos el archivo temporalmente
         $path = $file->storeAs('temp', 'bank_import_' . Auth::id() . '_' . time() . '.csv');
         $fullPath = storage_path('app/' . $path);
 
         // Abrimos el archivo para leer solo la fila 1
         $handle = fopen($fullPath, 'r');
-        
+
         if ($handle === false) {
             return redirect()->back()->with('error', 'No se pudo abrir el archivo subido.');
         }
@@ -95,8 +124,8 @@ class ConciliationController extends Controller
             'path' => 'required|string',
             'col_date' => 'required|integer',
             'col_description' => 'required|integer',
-            'col_withdrawal' => 'required|integer', 
-            'col_deposit' => 'required|integer',    
+            'col_withdrawal' => 'required|integer',
+            'col_deposit' => 'required|integer',
         ]);
 
         $company = Auth::user()->companies()->first();
@@ -118,7 +147,7 @@ class ConciliationController extends Controller
 
         // Recorremos el archivo fila por fila
         while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
-            
+
             // Evitar filas vacías
             if (!isset($data[$request->col_date]) || empty(trim($data[$request->col_date]))) {
                 continue;
@@ -127,7 +156,7 @@ class ConciliationController extends Controller
             // Limpiador matemático: Quita signos $, comas y espacios
             $rawWithdrawal = $data[$request->col_withdrawal] ?? '0';
             $rawDeposit = $data[$request->col_deposit] ?? '0';
-            
+
             $withdrawal = floatval(preg_replace('/[^-0-9\.]/', '', $rawWithdrawal));
             $deposit = floatval(preg_replace('/[^-0-9\.]/', '', $rawDeposit));
 

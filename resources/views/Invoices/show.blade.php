@@ -109,7 +109,10 @@
                     <!-- Botón de Cancelación -->
                     <div>
                         @if(!$invoice->is_canceled)
-                        <form action="{{ route('invoices.cancel', $invoice->id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de cancelar esta factura? Sus montos ya no sumarán en tu inteligencia financiera.');">
+                        <form action="{{ route('invoices.cancel', $invoice->id) }}" method="POST" class="form-confirm"
+                            data-title="¿Anular esta factura?"
+                            data-text="Al cancelarla, sus montos ya no sumarán en tu inteligencia financiera ni en el cálculo de impuestos."
+                            data-confirm="Sí, anular factura">
                             @csrf
                             <button type="submit" class="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-50 hover:border-red-300 transition shadow-sm text-xs">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

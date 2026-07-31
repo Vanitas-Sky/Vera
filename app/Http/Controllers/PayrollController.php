@@ -6,6 +6,9 @@ use App\Models\Employee;
 use App\Models\PayrollPeriod;
 use App\Models\PayrollDetail;
 use App\Services\PayrollCalculatorService;
+use App\Mail\PayslipEmail;
+use Illuminate\Support\Facades\Mail;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -23,14 +26,36 @@ class PayrollController extends Controller
         $this->payrollService = $payrollService;
     }
 
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $company = Auth::user()->companies()->first();
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
 
-        // Traemos los periodos de nómina calculados, ordenados del más reciente al más antiguo
-        $periods = PayrollPeriod::where('company_id', $company->id)->latest()->get();
+        if (!$company) {
+            return redirect()->route('companies.create')->with('error', 'Registra tu empresa primero.');
+        }
 
-        return view('payrolls.index', compact('periods'));
+        // 1. Recibir el parámetro (Formato HTML5: YYYY-MM)
+        $period = $request->input('period');
+
+        // 2. Query Builder
+        $query = \App\Models\PayrollPeriod::where('company_id', $company->id);
+
+        // 3. Aplicar filtro si el usuario seleccionó un mes
+        if ($period) {
+            $year = substr($period, 0, 4);
+            $month = substr($period, 5, 2);
+
+            // Asumiendo que el campo de fecha en tu tabla se llama start_date
+            $query->whereYear('start_date', $year)
+                ->whereMonth('start_date', $month);
+        }
+
+        // 4. Paginación
+        $periods = $query->orderBy('start_date', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('payrolls.index', compact('periods', 'period'));
     }
 
     public function generate(Request $request)
@@ -183,5 +208,48 @@ class PayrollController extends Controller
 
         // Descargamos el archivo
         return $pdf->download('Recibo_Nomina_' . $detail->employee->rfc . '_' . $detail->period->start_date->format('mY') . '.pdf');
+    }
+
+    public function sendMassiveEmails($id, PayrollCalculatorService $payrollService)
+    {
+        $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
+        $period = PayrollPeriod::where('company_id', $company->id)->findOrFail($id);
+
+        // Traemos todos los detalles de nómina de ese mes, con la data del empleado
+        $details = PayrollDetail::with('employee')->where('payroll_period_id', $period->id)->get();
+
+        $enviados = 0;
+        $sinCorreo = 0;
+
+        foreach ($details as $detail) {
+            $employee = $detail->employee;
+
+            // Si no tiene correo, lo saltamos
+            if (!$employee->email) {
+                $sinCorreo++;
+                continue;
+            }
+
+            // 1. REGLA DE ORO: Construir los datos obligatorios para el PDF fiscal
+            $isrBreakdown = $payrollService->getIsrBreakdown($detail->gross_salary);
+            $urlSat = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=SIMULADO-NOMINA-{$detail->id}&re={$company->rfc}&rr={$employee->rfc}";
+            $qrCode = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(120)->margin(0)->generate($urlSat));
+
+            // 2. Generar el PDF usando la vista CORRECTA (payrolls.pdf)
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payrolls.pdf', compact('company', 'detail', 'isrBreakdown', 'qrCode'));
+            $pdfContent = $pdf->output(); // Genera el binario del PDF en memoria
+
+            // 3. Enviar el correo (El Mailable ya sabe que debe usar emails.payslip para el mensaje)
+            Mail::to($employee->email)->send(new PayslipEmail($employee, $period->period_name, $pdfContent));
+
+            $enviados++;
+        }
+
+        $mensaje = "Se enviaron $enviados recibos de nómina exitosamente.";
+        if ($sinCorreo > 0) {
+            $mensaje .= " ($sinCorreo empleados no tienen correo registrado).";
+        }
+
+        return redirect()->back()->with('success', $mensaje);
     }
 }

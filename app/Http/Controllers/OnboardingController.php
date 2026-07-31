@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Company;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Rules\ValidRfc;
 
 class OnboardingController extends Controller
 {
@@ -20,9 +21,9 @@ class OnboardingController extends Controller
     {
         // 1. Validación estricta
         $request->validate([
-            'rfc' => 'required|string|min:12|max:13',
+            'rfc' => ['required', 'string', new ValidRfc],
             'legal_name' => 'required|string|max:255',
-            'postal_code' => 'required|string|size:5', // Restringido exactamente a 5 caracteres
+            'postal_code' => ['required', 'string', 'regex:/^(?!00000)[0-9]{5}$/'], // Restringido exactamente a 5 caracteres
             'tax_regime_code' => 'required|exists:sat_tax_regimes,code',
         ]);
 
