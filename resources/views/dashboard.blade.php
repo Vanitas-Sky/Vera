@@ -15,8 +15,43 @@
         </div>
     </x-slot>
 
+    <!-- Librería para el Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+
+            <!-- TARJETA DE RESUMEN VERA AI -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-l-4 border-indigo-600">
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">Resumen Ejecutivo Vera AI</h3>
+                            <p class="text-xs text-slate-500">Análisis generado en tiempo real basado en tus registros activos.</p>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor Dinámico -->
+                    <div id="ai-summary-container" class="text-sm text-slate-700">
+
+                        <!-- Animación de Esqueleto Cargando -->
+                        <div id="ai-skeleton" class="animate-pulse space-y-3">
+                            <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                            <div class="h-4 bg-slate-200 rounded w-5/6"></div>
+                            <div class="h-4 bg-slate-200 rounded w-1/2"></div>
+                        </div>
+
+                        <!-- Contenido Renderizado -->
+                        <div id="ai-content" class="hidden overflow-x-auto" style="line-height: 1.6;"></div>
+
+                    </div>
+                </div>
+            </div>
 
             <!-- Alerta del Semáforo Fiscal -->
             @if($semaforo === 'rojo')
@@ -311,4 +346,35 @@
 
         </div>
     </div>
+
+    <!-- Script de Petición Asíncrona -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const skeleton = document.getElementById('ai-skeleton');
+            const content = document.getElementById('ai-content');
+
+            try {
+                const response = await fetch('{{ route("ai.dashboard.summary") }}', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    content.innerHTML = marked.parse(data.summary);
+                } else {
+                    content.innerHTML = '<span class="text-red-500 font-semibold">No se pudo generar el resumen en este momento.</span>';
+                }
+            } catch (error) {
+                content.innerHTML = '<span class="text-red-500 font-semibold">Error de conexión al servidor de IA.</span>';
+            } finally {
+                skeleton.classList.add('hidden');
+                content.classList.remove('hidden');
+            }
+        });
+    </script>
 </x-app-layout>
