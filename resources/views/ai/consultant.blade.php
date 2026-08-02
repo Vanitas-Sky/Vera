@@ -1,13 +1,18 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-vera-dark leading-tight flex items-center gap-2">
-                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h2 class="font-semibold text-xl leading-tight flex items-center gap-2">
+                <!-- Ícono del Relámpago en Verde Menta -->
+                <svg class="w-6 h-6 text-vera-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
-                {{ __('Consultor Vera AI') }}
+
+                <!-- Texto con Gradiente Animado (Máscara de Texto) -->
+                <span class="animate-text-shimmer bg-[linear-gradient(110deg,#ffffff,45%,#10B981,55%,#ffffff)] bg-[length:250%_100%] bg-clip-text text-transparent">
+                    {{ __('Consultor Vera AI') }}
+                </span>
             </h2>
-            <span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">Claude 4 Haiku Engine</span>
+            <span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">Claude Haiku 4.5 Engine</span>
         </div>
     </x-slot>
 
@@ -24,7 +29,7 @@
 
                     <!-- Mensaje Inicial de Vera (Corregido con la imagen) -->
                     <div class="flex gap-4">
-                        <img src="{{ asset('img/vera-anime.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200" style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                        <img src="{{ asset('img/noche.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200" style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
                         <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm text-slate-700">
                             <p>Hola. Soy <strong>Vera AI</strong>, tu consultor financiero y legal. Tengo el contexto de la empresa <strong>{{ $company->legal_name }}</strong>.</p>
                             <p class="mt-2">¿En qué te puedo asesorar hoy sobre nóminas, impuestos, IMSS o finanzas corporativas?</p>
@@ -143,7 +148,7 @@
                 } else if (sender === 'ai') {
                     // Burbuja de la IA (Clara + Parseo de Markdown)
                     innerHTML = `
-                        <img src="{{ asset('img/vera-anime.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200" style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                        <img src="{{ asset('img/noche.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200" style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
                         <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm text-slate-700 overflow-x-auto" style="line-height: 1.6;">
                             ${marked.parse(text)}
                         </div>

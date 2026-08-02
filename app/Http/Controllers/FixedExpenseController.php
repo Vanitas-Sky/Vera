@@ -21,12 +21,17 @@ class FixedExpenseController extends Controller
             ->where('is_active', true)
             ->get();
 
+        // --- CÁLCULOS PARA LOS KPIS (NUEVO) ---
         $totalMonthlyOpex = $activeExpenses->sum('monthly_amount');
+        $annualProjection = $totalMonthlyOpex * 12; // Proyección a 12 meses
+        $activeContractsCount = $activeExpenses->count(); // Total de contratos activos
+        // --------------------------------------
 
         $alerts = [];
         $today = \Carbon\Carbon::now();
 
         foreach ($activeExpenses as $expense) {
+            // ... (Tu código de alertas de vencimiento y pago próximo se queda EXACTAMENTE igual) ...
             // 1. Alerta de Vencimiento de Contrato / Póliza
             if ($expense->contract_end_date) {
                 $daysToRenew = $today->diffInDays($expense->contract_end_date, false);
@@ -68,6 +73,7 @@ class FixedExpenseController extends Controller
 
         $query = \App\Models\FixedExpense::where('company_id', $company->id);
 
+        // ... (Tu código de filtros se queda EXACTAMENTE igual) ...
         // Filtro Estatus
         if ($status === 'activos') {
             $query->where('is_active', true);
@@ -94,7 +100,17 @@ class FixedExpenseController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('expenses.fixed.index', compact('expenses', 'totalMonthlyOpex', 'alerts', 'search', 'category', 'status'));
+        // --- ACTUALIZAR LA FUNCIÓN COMPACT() (NUEVO) ---
+        return view('expenses.fixed.index', compact(
+            'expenses',
+            'totalMonthlyOpex',
+            'annualProjection',     // <- Nueva variable
+            'activeContractsCount', // <- Nueva variable
+            'alerts',
+            'search',
+            'category',
+            'status'
+        ));
     }
 
     public function create()

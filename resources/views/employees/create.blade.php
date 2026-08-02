@@ -109,7 +109,7 @@
                         <a href="{{ route('employees.index') }}" class="px-4 py-2 bg-white border border-slate-300 rounded-md font-bold text-slate-700 hover:bg-slate-50 transition">
                             Cancelar
                         </a>
-                        <button type="submit" class="px-6 py-2 bg-slate-900 text-white rounded-md font-bold hover:bg-slate-800 transition">
+                        <button type="submit" class="px-6 py-2 bg-vera-green text-white rounded-md font-bold hover:bg-emerald-700 transition">
                             Guardar Empleado
                         </button>
                     </div>

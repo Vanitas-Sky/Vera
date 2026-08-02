@@ -159,7 +159,7 @@
 
                     <!-- Botones -->
                     <div class="flex justify-end gap-3 pt-6 border-t border-slate-200">
-                        <button type="submit" class="px-6 py-2 bg-emerald-600 text-white rounded-md font-bold hover:bg-emerald-700 transition shadow-md flex items-center gap-2">
+                        <button type="submit" class="px-6 py-2 bg-vera-green text-white rounded-md font-bold hover:bg-emerald-700 transition shadow-md flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                             Timbrar Factura
                         </button>

@@ -21,6 +21,16 @@ export default {
                     green: '#10B981',  // Verde Menta
                     gray: '#64748B',   // Gris Pizarra
                 }
+            },
+            // NUEVA SECCIÓN PARA ANIMACIONES:
+            animation: {
+                'text-shimmer': 'text-shimmer 2s ease-out infinite',
+            },
+            keyframes: {
+                'text-shimmer': {
+                    '0%': { backgroundPosition: '100% 50%' },
+                    '100%': { backgroundPosition: '0% 20%' },
+                }
             }
         },
     },

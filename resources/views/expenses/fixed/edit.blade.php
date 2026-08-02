@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="{{ route('opex.index') }}" class="text-slate-400 hover:text-slate-600 transition font-bold">
+            <a href="{{ route('opex.index') }}" class="text-white hover:text-vera-green transition font-bold">
                 &larr; Volver
             </a>
             <h2 class="font-semibold text-xl text-vera-dark leading-tight">

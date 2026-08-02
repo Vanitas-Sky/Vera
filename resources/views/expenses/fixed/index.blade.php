@@ -50,10 +50,37 @@
                     <p class="text-xs text-slate-500 mt-2">Esta es tu carga operativa base antes de sueldos o impuestos.</p>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6 md:col-span-2">
-                    <!-- Aquí irá a futuro la gráfica dinámica del flujo de caja (Módulo 1) -->
-                    <div class="h-full flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg">
-                        <p class="text-sm text-slate-400">Espacio reservado para gráfico de proyección OpEx</p>
+                <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- Tarjeta 1: OpEx Actual -->
+                    <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center">
+                        <h3 class="text-sm font-semibold text-vera-slate uppercase tracking-wider">OpEx Mensual Actual</h3>
+                        <p class="text-3xl font-bold text-vera-dark mt-2">${{ number_format($totalMonthlyOpex, 2) }} <span class="text-sm font-normal text-slate-400">MXN</span></p>
+                        <p class="text-xs text-vera-accent mt-1 flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Costos fijos calculados
+                        </p>
+                    </div>
+
+                    <!-- Tarjeta 2: Proyección (Cumple la promesa del documento) -->
+                    <div class="bg-vera-dark p-6 rounded-lg border border-slate-700 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                        <!-- Detalle decorativo de UI -->
+                        <div class="absolute -right-6 -top-6 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
+
+                        <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Proyección Anualizada</h3>
+                        <p class="text-3xl font-bold text-white mt-2">${{ number_format($annualProjection, 2) }} <span class="text-sm font-normal text-slate-400">MXN</span></p>
+                        <p class="text-xs text-slate-400 mt-1">Impacto estimado en 12 meses</p>
+                    </div>
+
+                    <!-- Tarjeta 3: Contratos Activos -->
+                    <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-center">
+                        <h3 class="text-sm font-semibold text-vera-slate uppercase tracking-wider">Contratos Activos</h3>
+                        <p class="text-3xl font-bold text-vera-dark mt-2">{{ $activeContractsCount }}</p>
+                        <p class="text-xs text-vera-warning mt-1 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-vera-warning"></span>
+                            Revisar próximos vencimientos
+                        </p>
                     </div>
                 </div>
             </div>
