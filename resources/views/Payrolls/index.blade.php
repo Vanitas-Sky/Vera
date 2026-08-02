@@ -6,7 +6,10 @@
             </h2>
 
             <!-- Botón de Generación (Envuelto en Formulario POST) -->
-            <form action="{{ route('payrolls.generate') }}" method="POST" onsubmit="return confirm('¿Estás seguro de calcular la nómina para todos los empleados activos?');">
+            <form action="{{ route('payrolls.generate') }}" method="POST" class="form-confirm"
+                data-title="¿Generar la nómina del mes?"
+                data-text="Se calculará la nómina para todos los empleados activos y este proceso no se puede deshacer."
+                data-confirm="Sí, calcular nómina">
                 @csrf
                 <button type="submit" class="bg-vera-green hover:bg-emerald-400 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition text-sm flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -16,6 +16,7 @@ class Employee extends Model
         'full_name',
         'email',
         'position',
+        'cp',
         'nss',
         'clabe',
         'hire_date',

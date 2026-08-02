@@ -76,8 +76,11 @@ class EmployeeController extends Controller
             // Nuevos campos
             'email' => 'nullable|email|max:255',
             'position' => 'nullable|string|max:255',
+            'cp' => ['nullable', 'string', 'regex:/^(?!00000)[0-9]{5}$/'],
             'clabe' => ['nullable', 'string', new ValidClabe],
             'hire_date' => 'nullable|date',
+        ], [
+            'cp.regex' => 'El Código Postal debe tener 5 dígitos y no puede ser 00000.',
         ]);
 
         // Inserción asegurando el company_id
@@ -90,6 +93,7 @@ class EmployeeController extends Controller
             'base_salary' => $request->base_salary,
             'email' => $request->email,
             'position' => $request->position,
+            'cp' => $request->cp,
             'clabe' => $request->clabe,
             'hire_date' => $request->hire_date,
             'is_active' => true,
@@ -127,8 +131,11 @@ class EmployeeController extends Controller
             // Nuevos campos
             'email' => 'nullable|email|max:255',
             'position' => 'nullable|string|max:255',
+            'cp' => ['nullable', 'string', 'regex:/^(?!00000)[0-9]{5}$/'],
             'clabe' => ['nullable', 'string', new ValidClabe],
             'hire_date' => 'nullable|date',
+        ], [
+            'cp.regex' => 'El Código Postal debe tener 5 dígitos y no puede ser 00000.',
         ]);
 
         $employee->update([
@@ -139,6 +146,7 @@ class EmployeeController extends Controller
             'base_salary' => $request->base_salary,
             'email' => $request->email,
             'position' => $request->position,
+            'cp' => $request->cp,
             'clabe' => $request->clabe,
             'hire_date' => $request->hire_date,
             'is_active' => $request->has('is_active'),

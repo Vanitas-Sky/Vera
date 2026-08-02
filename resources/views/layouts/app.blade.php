@@ -77,6 +77,17 @@
             });
         });
     </script>
+
+    <a href="{{ route('ai.consultant') }}"
+        class="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-600"
+        aria-label="Abrir Consultor Vera AI"
+        title="Consultor Vera AI">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.5a2.75 2.75 0 0 1 4.5 0h.5a2.5 2.5 0 0 1 2.5 2.5v.5a2.75 2.75 0 0 1 0 4.5v.5a2.5 2.5 0 0 1-2.5 2.5h-.5a2.75 2.75 0 0 1-4.5 0h-.5A2.5 2.5 0 0 1 6.75 13v-.5a2.75 2.75 0 0 1 0-4.5v-.5A2.5 2.5 0 0 1 9.25 5h.5zm2.25 8.25a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm-4.25-4.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm8.5 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13v5m-2.5-2.5h5"></path>
+        </svg>
+        <span class="hidden sm:inline">Vera AI</span>
+    </a>
 </body>
 
 </html>
