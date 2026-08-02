@@ -69,6 +69,12 @@
                                 @error('position') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
                             </div>
                             <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">Código Postal</label>
+                                <input type="text" name="cp" value="{{ old('cp') }}" maxlength="5" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. 06000">
+                                <p class="text-[11px] text-slate-400 mt-1">5 dígitos para registro de domicilio del empleado.</p>
+                                @error('cp') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
+                            </div>
+                            <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">NSS</label>
                                 <input type="text" name="nss" value="{{ old('nss') }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. 12345678903" required>
                                 <p class="text-[11px] text-slate-400 mt-1">Número de Seguridad Social (11 dígitos exactos).</p>

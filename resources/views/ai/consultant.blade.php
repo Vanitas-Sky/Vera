@@ -22,11 +22,9 @@
                 <!-- Área de Mensajes (Chat Box) -->
                 <div id="chatbox" class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
 
-                    <!-- Mensaje Inicial de Vera -->
+                    <!-- Mensaje Inicial de Vera (Corregido con la imagen) -->
                     <div class="flex gap-4">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
-                            V
-                        </div>
+                        <img src="{{ asset('img/vera-anime.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200" style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
                         <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm text-slate-700">
                             <p>Hola. Soy <strong>Vera AI</strong>, tu consultor financiero y legal. Tengo el contexto de la empresa <strong>{{ $company->legal_name }}</strong>.</p>
                             <p class="mt-2">¿En qué te puedo asesorar hoy sobre nóminas, impuestos, IMSS o finanzas corporativas?</p>
@@ -97,13 +95,15 @@
                 try {
                     // 3. Hacer la llamada AJAX al controlador
                     const response = await fetch('{{ route("ai.ask") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify({question: question})
-                        });
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            question: question
+                        })
+                    });
 
                     const data = await response.json();
 
@@ -142,9 +142,8 @@
                     `;
                 } else if (sender === 'ai') {
                     // Burbuja de la IA (Clara + Parseo de Markdown)
-                    // Las clases 'prose' son de Tailwind Typography, pero usamos estilos base si no está instalada
                     innerHTML = `
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-md">V</div>
+                        <img src="{{ asset('img/vera-anime.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200" style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
                         <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm text-slate-700 overflow-x-auto" style="line-height: 1.6;">
                             ${marked.parse(text)}
                         </div>

@@ -216,7 +216,7 @@
                             <p class="info-text"><strong>Puesto:</strong> {{ $detail->employee->position ?? 'No especificado' }}</p>
                         </td>
                         <td style="width: 50%; vertical-align: top;">
-                            <p class="info-text"><strong>C.P. Fiscal:</strong> {{ $company->zip_code ?? '29950' }}</p>
+                            <p class="info-text"><strong>C.P. Fiscal:</strong> {{ $detail->employee->cp ?? '29950' }}</p>
                             <p class="info-text"><strong>Uso CFDI:</strong> CN01 - Nómina</p>
                             <p class="info-text"><strong>Ingreso:</strong> {{ $detail->employee->hire_date ? \Carbon\Carbon::parse($detail->employee->hire_date)->format('d/m/Y') : 'No capturada' }}</p>
                             <p class="info-text"><strong>CLABE:</strong> {{ $detail->employee->clabe ?? 'No capturada' }}</p>

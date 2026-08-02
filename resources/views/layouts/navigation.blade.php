@@ -16,10 +16,6 @@
                         {{ __('Inicio') }}
                     </x-nav-link>
 
-                    <x-nav-link :href="route('ai.consultant')" :active="request()->routeIs('ai.*')">
-                        {{ __('Vera AI') }}
-                    </x-nav-link>
-
                     <x-nav-link :href="route('company.profile')" :active="request()->routeIs('company.profile')">
                         {{ __('Perfil Fiscal') }}
                     </x-nav-link>

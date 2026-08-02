@@ -91,13 +91,13 @@
                 <a href="{{ route('invoices.index') }}" class="flex-1 bg-white border border-slate-300 text-slate-700 text-center py-3 rounded-lg font-bold hover:bg-slate-50 transition shadow-sm">
                     Subir XML (Ingresos y Egresos)
                 </a>
-                <!-- Botón IA (Estático temporalmente) -->
-                <button type="button" onclick="alert('La integración con el Consultor Inteligente Vera AI estará disponible en la próxima actualización.')" class="flex-1 bg-vera-green text-white text-center py-3 rounded-lg font-bold hover:bg-emerald-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer opacity-90">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                <a href="{{ route('ai.consultant') }}" class="flex-1 bg-vera-green text-white text-center py-3 rounded-lg font-bold hover:bg-emerald-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer opacity-90">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.5a2.75 2.75 0 0 1 4.5 0h.5a2.5 2.5 0 0 1 2.5 2.5v.5a2.75 2.75 0 0 1 0 4.5v.5a2.5 2.5 0 0 1-2.5 2.5h-.5a2.75 2.75 0 0 1-4.5 0h-.5A2.5 2.5 0 0 1 6.75 13v-.5a2.75 2.75 0 0 1 0-4.5v-.5A2.5 2.5 0 0 1 9.25 5h.5zm2.25 8.25a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm-4.25-4.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5zm8.5 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 13v5m-2.5-2.5h5"></path>
                     </svg>
-                    Consultor Vera AI <span class="text-[10px] bg-white text-vera-green px-1.5 py-0.5 rounded-full uppercase ml-1">Pronto</span>
-                </button>
+                    Consultor Vera AI
+                </a>
             </div>
 
             <!-- Tarjetas de Métricas Principales -->
