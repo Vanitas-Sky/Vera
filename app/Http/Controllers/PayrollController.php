@@ -108,7 +108,8 @@ class PayrollController extends Controller
 
             // 2. Calculamos los recibos y vamos sumando
             foreach ($employees as $employee) {
-                $calculation = $this->payrollService->calculatePayroll($employee->base_salary);
+                // Ahora le pasamos el objeto $employee completo
+                $calculation = $this->payrollService->calculatePayroll($employee);
 
                 PayrollDetail::create([
                     'payroll_period_id' => $period->id,
@@ -116,6 +117,11 @@ class PayrollController extends Controller
                     'gross_salary' => $calculation['gross_salary'],
                     'isr_retention' => $calculation['isr_retention'],
                     'imss_employee' => $calculation['imss_retention'],
+                    
+                    // CONECTAMOS LAS DEDUCCIONES PERSONALIZADAS
+                    'total_custom_deductions' => $calculation['total_custom_deductions'],
+                    'custom_deductions_breakdown' => $calculation['custom_deductions'], 
+                    
                     'net_salary' => $calculation['net_salary'],
                 ]);
 
@@ -123,6 +129,7 @@ class PayrollController extends Controller
                 $sumIsr += $calculation['isr_retention'];
                 $sumImss += $calculation['imss_retention'];
                 $sumNet += $calculation['net_salary'];
+                // Nota: $sumNet ya viene con las deducciones restadas desde el servicio, así que la contabilidad global cuadrará perfecto.
             }
 
             // 3. Actualizamos el periodo central con los totales reales

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+        <h2 class="font-semibold text-xl text-white leading-tight">
             {{ __('Bóveda de Facturas (CFDI)') }}
         </h2>
     </x-slot>
@@ -143,7 +143,7 @@
                                         @if($invoice->type === 'I')
                                         <span class="px-2 inline-flex text-[10px] leading-4 font-semibold rounded-full bg-emerald-100 text-emerald-800">Ingreso</span>
                                         @elseif($invoice->type === 'E')
-                                        <span class="px-2 inline-flex text-[10px] leading-4 font-semibold rounded-full bg-red-100 text-red-800">Egreso</span>
+                                        <span class="px-2 inline-flex text-[10px] leading-4 font-semibold rounded-full bg-yellow-200 text-vera-dark">Egreso</span>
                                         @else
                                         <span class="px-2 inline-flex text-[10px] leading-4 font-semibold rounded-full bg-slate-100 text-slate-800">{{ $invoice->type }}</span>
                                         @endif

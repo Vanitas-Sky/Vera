@@ -38,4 +38,15 @@ class Employee extends Model
     {
         return $this->hasMany(PayrollDetail::class);
     }
+
+    public function deductions()
+    {
+        return $this->hasMany(EmployeeDeduction::class);
+    }
+
+    // Añade este método en tu modelo Employee
+    public function activeDeductions()
+    {
+        return $this->hasMany(EmployeeDeduction::class)->where('is_active', true);
+    }
 }

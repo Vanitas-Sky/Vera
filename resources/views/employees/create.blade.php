@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex items-center gap-4">
             <a href="{{ route('employees.index') }}" class="text-slate-400 hover:text-slate-600 transition font-bold">&larr; Volver</a>
-            <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+            <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('Registrar Nuevo Empleado') }}
             </h2>
         </div>

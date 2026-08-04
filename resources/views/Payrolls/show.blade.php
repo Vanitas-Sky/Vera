@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="{{ route('payrolls.index') }}" class="text-white hover:text-vera-green transition">
+            <a href="{{ route('payrolls.index') }}" class="text-slate-500 hover:text-vera-green transition font-medium">
                 &larr; Volver
             </a>
             <h2 class="font-semibold text-xl text-vera-dark leading-tight">
@@ -13,16 +13,35 @@
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
+            <!-- Resumen Global de la Nómina -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                    <p class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Periodo Fiscal</p>
+                    <p class="text-lg font-bold text-vera-dark">Del {{ \Carbon\Carbon::parse($period->start_date)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($period->end_date)->format('d/m/Y') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Nómina Bruta</p>
+                    <p class="text-lg font-bold text-slate-700">${{ number_format($period->total_gross, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Total Retenciones</p>
+                    <p class="text-lg font-bold text-red-500">-${{ number_format($period->total_isr_retention + $period->total_imss_employee + $period->details->sum('total_custom_deductions'), 2) }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Dispersión Neta</p>
+                    <p class="text-2xl font-black text-vera-green">${{ number_format($period->total_net, 2) }}</p>
+                </div>
+            </div>
+
+            <!-- Desglose por Empleado -->
             @foreach($period->details as $detail)
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6 mb-6">
-                <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+
+                <!-- Encabezado del Recibo -->
+                <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                     <div>
                         <h3 class="text-lg font-bold text-vera-dark">{{ $detail->employee->full_name }}</h3>
-                        <p class="text-sm text-vera-gray">RFC: {{ $detail->employee->rfc }} | NSS: {{ $detail->employee->nss }}</p>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-vera-dark">{{ $detail->employee->full_name }}</h3>
-                        <p class="text-sm text-vera-gray">RFC: {{ $detail->employee->rfc }} | NSS: {{ $detail->employee->nss }}</p>
+                        <p class="text-sm text-vera-gray">RFC: {{ $detail->employee->rfc }} | NSS: {{ $detail->employee->nss ?? 'No registrado' }}</p>
                         <!-- Botón Descargar PDF Recibo -->
                         <div class="mt-3">
                             <a target="_blank" href="{{ route('payrolls.receipt.pdf', $detail->id) }}" class="inline-flex items-center gap-2 text-xs font-bold text-vera-green hover:text-emerald-700 transition uppercase tracking-wider">
@@ -39,51 +58,133 @@
                     </div>
                 </div>
 
-                <!-- Memoria de Cálculo (Desglose Matemático) -->
-                <div class="bg-slate-50 rounded-lg p-5 border border-slate-200">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Memoria de Cálculo ISR (Art. 96)</h4>
+                <!-- Grid de Memorias de Cálculo -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-                    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm text-center">
-                        <div class="p-3 bg-white rounded border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-400 mb-1">Base Gravable</p>
-                            <p class="font-bold text-vera-dark">${{ number_format($detail->isr_breakdown['base'], 2) }}</p>
-                        </div>
+                    <!-- Memoria de Cálculo ISR -->
+                    <div class="bg-slate-50 rounded-lg p-5 border border-slate-200">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2 flex justify-between">
+                            <span>Memoria de Cálculo ISR (Art. 96)</span>
+                            <span class="text-red-500">-${{ number_format($detail->isr_retention, 2) }}</span>
+                        </h4>
 
-                        <div class="p-3 bg-white rounded border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-400 mb-1">(-) Límite Inferior</p>
-                            <p class="font-medium text-slate-700 text-red-500">${{ number_format($detail->isr_breakdown['lower_limit'], 2) }}</p>
-                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-center">
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm">
+                                <p class="text-xs text-slate-400 mb-1">Base Gravable</p>
+                                <p class="font-bold text-vera-dark">${{ number_format($detail->isr_breakdown['base'], 2) }}</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm">
+                                <p class="text-xs text-slate-400 mb-1">(-) Límite Inferior</p>
+                                <p class="font-medium text-red-500">${{ number_format($detail->isr_breakdown['lower_limit'], 2) }}</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm">
+                                <p class="text-xs text-slate-400 mb-1">(=) Excedente</p>
+                                <p class="font-medium text-slate-700">${{ number_format($detail->isr_breakdown['surplus'], 2) }}</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm">
+                                <p class="text-xs text-slate-400 mb-1">(x) Tasa ({{ $detail->isr_breakdown['rate'] }}%)</p>
+                                <p class="font-medium text-slate-700">${{ number_format($detail->isr_breakdown['marginal_tax'], 2) }}</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm">
+                                <p class="text-xs text-slate-400 mb-1">(+) Cuota Fija</p>
+                                <p class="font-medium text-slate-700">${{ number_format($detail->isr_breakdown['fixed_fee'], 2) }}</p>
+                            </div>
 
-                        <div class="p-3 bg-white rounded border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-400 mb-1">(=) Excedente</p>
-                            <p class="font-medium text-slate-700">${{ number_format($detail->isr_breakdown['surplus'], 2) }}</p>
+                            @if($detail->isr_breakdown['is_minimum_wage'])
+                            <div class="p-2 bg-emerald-50 text-emerald-800 rounded border border-emerald-200 shadow-sm col-span-1">
+                                <p class="text-xs font-bold mb-1 uppercase">Exento</p>
+                                <p class="font-bold text-base">$0.00</p>
+                                <p class="text-[10px] leading-tight mt-1 opacity-75">Salario Mínimo</p>
+                            </div>
+                            @else
+                            <div class="p-2 bg-vera-dark text-white rounded border border-slate-800 shadow-sm col-span-1">
+                                <p class="text-xs text-slate-400 mb-1">Total ISR</p>
+                                <p class="font-bold">${{ number_format($detail->isr_breakdown['total_isr'], 2) }}</p>
+                            </div>
+                            @endif
                         </div>
+                    </div>
 
-                        <div class="p-3 bg-white rounded border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-400 mb-1">(x) Tasa ({{ $detail->isr_breakdown['rate'] }}%)</p>
-                            <p class="font-medium text-slate-700">${{ number_format($detail->isr_breakdown['marginal_tax'], 2) }}</p>
-                        </div>
+                    <!-- Memoria de Cálculo IMSS (Uniforme) -->
+                    <div class="bg-slate-50 rounded-lg p-5 border border-slate-200">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2 flex justify-between">
+                            <span>Retención IMSS (Cuota Obrera)</span>
+                            <span class="text-red-500">-${{ number_format($detail->imss_employee, 2) }}</span>
+                        </h4>
 
-                        <div class="p-3 bg-white rounded border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-400 mb-1">(+) Cuota Fija</p>
-                            <p class="font-medium text-slate-700">${{ number_format($detail->isr_breakdown['fixed_fee'], 2) }}</p>
-                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-center">
 
-                        <!-- Caja Final de Retención -->
-                        @if($detail->isr_breakdown['is_minimum_wage'])
-                        <div class="p-3 bg-emerald-50 text-emerald-800 rounded border border-emerald-200 shadow-sm col-span-1">
-                            <p class="text-xs font-bold mb-1 uppercase">Exento (Art. 96)</p>
-                            <p class="font-bold text-lg">$0.00</p>
-                            <p class="text-[10px] leading-tight mt-1 opacity-75">Protegido por Salario Mínimo</p>
+                            @if($detail->isr_breakdown['is_minimum_wage'])
+                            <!-- Caso Salario Mínimo: Empresa paga el IMSS -->
+                            <div class="col-span-full flex flex-col items-center justify-center p-4 bg-emerald-50 text-emerald-800 rounded border border-emerald-200 shadow-sm h-full">
+                                <svg class="w-8 h-8 mb-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                                <p class="text-sm font-bold uppercase mb-1">Exento (Art. 36 LSS)</p>
+                                <p class="text-xs opacity-80 text-center max-w-[250px]">El empleado percibe el Salario Mínimo. La cuota obrera es absorbida por el Patrón.</p>
+                                <p class="font-black text-xl mt-2">$0.00</p>
+                            </div>
+                            @else
+                            @php
+                            $sbcMensual = $detail->gross_salary * 1.0493;
+                            $cuotaBase = $sbcMensual * 0.02375;
+                            $cuotaExcedente = max(0, $detail->imss_employee - $cuotaBase);
+                            @endphp
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm flex flex-col justify-center">
+                                <p class="text-xs text-slate-400 mb-1">SBC Mensual Est.</p>
+                                <p class="font-bold text-vera-dark">${{ number_format($sbcMensual, 2) }}</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm flex flex-col justify-center">
+                                <p class="text-xs text-slate-400 mb-1">(x) Tasa (4 Ramos)</p>
+                                <p class="font-medium text-slate-700">2.375%</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm flex flex-col justify-center">
+                                <p class="text-xs text-slate-400 mb-1">(=) Cuota Base</p>
+                                <p class="font-medium text-slate-700">${{ number_format($cuotaBase, 2) }}</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm flex flex-col justify-center">
+                                <p class="text-xs text-slate-400 mb-1">(+) Exc. > 3 UMAs</p>
+                                <p class="font-medium text-slate-700">${{ number_format($cuotaExcedente, 2) }}</p>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-slate-100 shadow-sm flex items-center justify-center px-1">
+                                <p class="text-[10px] text-slate-400 leading-tight">Incluye: Enf. y Maternidad, Invalidez y Vida, Cesantía y Vejez.</p>
+                            </div>
+                            <div class="p-2 bg-vera-dark text-white rounded border border-slate-800 shadow-sm col-span-1 flex flex-col justify-center">
+                                <p class="text-xs text-slate-400 mb-1">Total IMSS</p>
+                                <p class="font-bold text-lg">${{ number_format($detail->imss_employee, 2) }}</p>
+                            </div>
+                            @endif
                         </div>
-                        @else
-                        <div class="p-3 bg-vera-dark text-white rounded border border-slate-800 shadow-sm col-span-1">
-                            <p class="text-xs text-slate-400 mb-1">ISR a Retener</p>
-                            <p class="font-bold">${{ number_format($detail->isr_breakdown['total_isr'], 2) }}</p>
+                    </div>
+
+                </div>
+
+                <!-- ========================================== -->
+                <!-- NUEVO: TARJETA DE DEDUCCIONES PERSONALIZADAS -->
+                <!-- ========================================== -->
+                @if($detail->total_custom_deductions > 0 && !empty($detail->custom_deductions_breakdown))
+                <div class="mt-6 bg-slate-50 rounded-lg p-5 border border-slate-200">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-200 pb-2 flex justify-between">
+                        <span>Deducciones Especiales (Infonavit, Préstamos, etc.)</span>
+                        <span class="text-red-500">-${{ number_format($detail->total_custom_deductions, 2) }}</span>
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        @foreach($detail->custom_deductions_breakdown as $custom)
+                        <div class="bg-white p-3 rounded border border-slate-100 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-xs font-bold text-vera-dark">{{ $custom['description'] }}</p>
+                                <p class="text-[10px] text-slate-400 font-mono">Clave SAT: {{ $custom['sat_key'] }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-bold text-red-500">-${{ number_format($custom['amount'], 2) }}</p>
+                            </div>
                         </div>
-                        @endif
+                        @endforeach
                     </div>
                 </div>
+                @endif
+
             </div>
             @endforeach
 

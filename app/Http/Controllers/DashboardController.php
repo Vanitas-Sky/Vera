@@ -53,15 +53,20 @@ class DashboardController extends Controller
 
         $discrepancy = $bankWithdrawals - $totalExpense;
 
-        // 4. Nóminas
-        $payrolls = \App\Models\PayrollPeriod::where('company_id', $company->id)
+        // 4. Nóminas (ACTUALIZADO CON IMSS)
+       $payrolls = \App\Models\PayrollPeriod::where('company_id', $company->id)
             ->whereMonth('start_date', $currentMonth)
             ->whereYear('start_date', $currentYear)
+            ->with('details') // <-- Asegúrate de cargar los recibos
             ->get();
 
         $totalPayrollGross = $payrolls->sum('total_gross');
         $totalPayrollNet = $payrolls->sum('total_net');
         $totalIsrRetained = $payrolls->sum('total_isr_retention');
+        $totalImssRetained = $payrolls->sum('total_imss_employee');
+        
+        // Sumamos todas las deducciones personalizadas de todos los recibos del mes
+        $totalCustomDeductions = $payrolls->flatMap->details->sum('total_custom_deductions');
 
         // 5. Proyección OpEx
         $projectedOpex = \App\Models\FixedExpense::where('company_id', $company->id)
@@ -164,6 +169,8 @@ class DashboardController extends Controller
             'totalPayrollGross',
             'totalPayrollNet',
             'totalIsrRetained',
+            'totalImssRetained',
+            'totalCustomDeductions',
             'netIva',
             'netProfit',
             'semaforo',
@@ -173,8 +180,8 @@ class DashboardController extends Controller
             'subtotalExpense',
             'invoices',
             'selectedPeriod',
-            'bankWithdrawals', // <-- Añadido
-            'discrepancy',      // <-- Añadido
+            'bankWithdrawals',
+            'discrepancy',
             'alerts'
         ));
     }
