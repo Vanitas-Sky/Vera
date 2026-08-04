@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="{{ route('payrolls.index') }}" class="text-vera-gray hover:text-vera-dark transition">
+            <a href="{{ route('payrolls.index') }}" class="text-white hover:text-vera-green transition">
                 &larr; Volver
             </a>
             <h2 class="font-semibold text-xl text-vera-dark leading-tight">

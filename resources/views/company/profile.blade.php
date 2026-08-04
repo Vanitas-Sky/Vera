@@ -61,7 +61,7 @@
                     </div>
 
                     <div class="mt-8 flex justify-end pt-4 border-t border-slate-100">
-                        <button type="submit" class="bg-vera-dark text-white px-6 py-2 rounded-lg hover:bg-slate-800 transition font-bold shadow-sm">
+                        <button type="submit" class="bg-vera-green text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition font-bold shadow-sm">
                             Guardar Configuración Fiscal
                         </button>
                     </div>

@@ -25,7 +25,7 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-l-4 border-indigo-600">
                 <div class="p-6">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                        <div class="w-10 h-10 rounded-full bg-vera-green flex items-center justify-center text-white font-bold">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                             </svg>
