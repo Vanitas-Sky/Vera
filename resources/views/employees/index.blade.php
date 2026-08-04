@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+            <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('Plantilla de Empleados') }}
             </h2>
             <a href="{{ route('employees.create') }}" class="bg-vera-dark hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition text-sm">
@@ -96,10 +96,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-bold text-vera-dark">{{ $employee->full_name }}</div>
                                     @if($employee->position)
-                                        <div class="text-xs font-semibold text-slate-600">{{ $employee->position }}</div>
+                                    <div class="text-xs font-semibold text-slate-600">{{ $employee->position }}</div>
                                     @endif
                                     @if($employee->email)
-                                        <div class="text-xs text-slate-400">{{ $employee->email }}</div>
+                                    <div class="text-xs text-slate-400">{{ $employee->email }}</div>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -132,6 +132,9 @@
                                             <button type="submit" class="text-red-600 hover:text-red-900 font-bold text-xs uppercase transition">
                                                 Dar de Baja
                                             </button>
+                                            <a href="{{ route('employees.deductions.index', $employee->id) }}" class="inline-flex items-center px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-md font-semibold text-xs text-indigo-700 uppercase tracking-widest shadow-sm hover:bg-indigo-100 transition ease-in-out duration-150">
+                                                Gestionar Deducciones (Infonavit, Préstamos)
+                                            </a>
                                         </form>
                                         @endif
                                     </div>

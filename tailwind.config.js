@@ -20,6 +20,7 @@ export default {
                     dark: '#0F172A',   // Azul Medianoche
                     green: '#10B981',  // Verde Menta
                     gray: '#64748B',   // Gris Pizarra
+                    yellow: '#dbc358',   // Gris Pizarra
                 }
             },
             // NUEVA SECCIÓN PARA ANIMACIONES:

@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+            <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('Control de OpEx (Gastos Fijos)') }}
             </h2>
             <a href="{{ route('opex.create') }}" class="bg-vera-dark text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition inline-block">

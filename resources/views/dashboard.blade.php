@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+            <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('Semáforo y Panel Fiscal') }}
             </h2>
 
@@ -197,13 +197,50 @@
 
                 <!-- ================= SEGUNDA FILA DEL GRID ================= -->
 
-                <!-- Nómina -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6 flex flex-col h-full">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Costo Operativo Nómina</p>
-                    <p class="text-3xl font-black text-amber-600 mt-2">${{ number_format($totalPayrollGross, 2) }}</p>
-                    <p class="text-xs text-slate-500 mt-1">ISR Retenido a Enterar: ${{ number_format($totalIsrRetained, 2) }}</p>
-                </div>
+                <!-- Nómina y Pasivos (Retenciones) -->
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6 flex flex-col justify-between h-full">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Costo Operativo Nómina (Bruta)</p>
+                        <p class="text-3xl font-black text-amber-600 mt-2">${{ number_format($totalPayrollGross, 2) }}</p>
+                    </div>
 
+                    <!-- Desglose de Pasivos Retenidos -->
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Pasivos Retenidos a Transferir:</p>
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-500 flex items-center gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                                    ISR Retenido
+                                </span>
+                                <span class="font-bold text-slate-700">${{ number_format($totalIsrRetained, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-500 flex items-center gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                    IMSS (Cuota Obrera)
+                                </span>
+                                <span class="font-bold text-slate-700">${{ number_format($totalImssRetained ?? 0, 2) }}</span>
+                            </div>
+
+                            <!-- NUEVO: Deducciones Personalizadas (Infonavit, etc) -->
+                            @if(isset($totalCustomDeductions) && $totalCustomDeductions > 0)
+                            <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-50 border-dashed">
+                                <span class="text-slate-500 flex items-center gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                    Otras Deducciones
+                                </span>
+                                <span class="font-bold text-slate-700">${{ number_format($totalCustomDeductions, 2) }}</span>
+                            </div>
+                            @endif
+
+                        </div>
+                        <div class="mt-3 bg-red-50 p-2 rounded border border-red-100 flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-red-600 uppercase">Total de Pasivos</span>
+                            <span class="text-xs font-black text-red-700">${{ number_format($totalIsrRetained + ($totalImssRetained ?? 0) + ($totalCustomDeductions ?? 0), 2) }}</span>
+                        </div>
+                    </div>
+                </div>
                 <!-- Centro de Notificaciones -->
                 <div class="md:col-span-2 bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 flex flex-col h-full">
                     <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
@@ -312,7 +349,7 @@
                                     @if($inv->type == 'I')
                                     <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Ingreso</span>
                                     @elseif($inv->type == 'E')
-                                    <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Egreso</span>
+                                    <span class="bg-yellow-200 text-yellow-800 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Egreso</span>
                                     @else
                                     <span class="bg-slate-100 text-slate-800 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">{{ $inv->type }}</span>
                                     @endif

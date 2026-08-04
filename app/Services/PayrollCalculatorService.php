@@ -1,13 +1,22 @@
 <?php
 
 namespace App\Services;
+use App\Models\Employee; // <-- IMPORTANTE: Agregar esta línea
 
 class PayrollCalculatorService
 {
-    // Variables fiscales de Ley (2024)
+    // ==========================================
+    // VARIABLES FISCALES DE LEY (2024/2026)
+    // ==========================================
+    private float $umaDiaria = 108.57; // UMA Diaria para cálculo IMSS
     private float $umaMensual = 3300.53;
+    private float $umiDiaria = 100.81;
     private float $topeMensualSubsidio = 9081.00;
     private float $salarioMinimoMensual = 7567.47; // $248.93 * 30.4 días (Zona General)
+
+    // Factor de Integración Mínimo de Ley (Aguinaldo 15 días, Prima Vacacional 25% de 12 días)
+    // Fórmula: 1 + (15/365) + ((12*0.25)/365) = 1.0493
+    private float $factorIntegracionBasico = 1.0493;
 
     private array $monthlyIsrTable = [
         ['lower' => 0.01, 'upper' => 746.04, 'fixed_fee' => 0.00, 'rate' => 0.0192],
@@ -23,6 +32,9 @@ class PayrollCalculatorService
         ['lower' => 375975.62, 'upper' => 999999999.00, 'fixed_fee' => 117912.32, 'rate' => 0.3500],
     ];
 
+    // ==========================================
+    // MÉTODOS ISR (Tu código intacto)
+    // ==========================================
     private function calculateSubsidy(float $monthlySalary): float
     {
         if ($monthlySalary > 0 && $monthlySalary <= $this->topeMensualSubsidio) {
@@ -33,7 +45,7 @@ class PayrollCalculatorService
 
     public function calculateMonthlyISR(float $monthlySalary): float
     {
-        // REGLA DE ORO: Escudo del Salario Mínimo (Art. 96)
+        // REGLA DE ORO: Escudo del Salario Mínimo (Art. 96 LISR)
         if ($monthlySalary <= $this->salarioMinimoMensual) {
             return 0.0;
         }
@@ -55,6 +67,7 @@ class PayrollCalculatorService
 
     public function getIsrBreakdown(float $monthlySalary): array
     {
+        // ... (Tu código intacto de getIsrBreakdown) ...
         if ($monthlySalary <= 0) {
             return [
                 'base' => 0, 'lower_limit' => 0, 'surplus' => 0, 'rate' => 0, 
@@ -63,7 +76,6 @@ class PayrollCalculatorService
             ];
         }
 
-        // Verificamos si aplica el escudo
         $isMinimumWage = $monthlySalary <= $this->salarioMinimoMensual;
 
         foreach ($this->monthlyIsrTable as $row) {
@@ -76,7 +88,6 @@ class PayrollCalculatorService
                 
                 $finalIsr = $calculatedIsr - $subsidy;
                 
-                // Si es salario mínimo, forzamos a 0. Si no, calculamos normal.
                 if ($isMinimumWage) {
                     $finalIsr = 0.0;
                 } else {
@@ -93,24 +104,118 @@ class PayrollCalculatorService
                     'calculated_isr' => round($calculatedIsr, 2),
                     'subsidy_applied' => $subsidy,
                     'total_isr' => $finalIsr,
-                    'is_minimum_wage' => $isMinimumWage // Pasamos la bandera a la UI
+                    'is_minimum_wage' => $isMinimumWage
                 ];
             }
         }
         return [];
     }
 
-    public function calculatePayroll(float $monthlySalary): array
+    // ==========================================
+    // MÉTODOS IMSS (NUEVO)
+    // ==========================================
+    
+    /**
+     * Calcula la Cuota Obrera del IMSS mensual.
+     */
+    public function calculateMonthlyIMSS(float $monthlySalary): float
     {
+        // 1. Obtener el Salario Diario y el SBC (Salario Base de Cotización)
+        $salarioDiario = $monthlySalary / 30.4; // Mes promedio fiscal
+        $sbc = $salarioDiario * $this->factorIntegracionBasico;
+
+        // Escudo IMSS: Si el empleado gana el salario mínimo, el patrón paga el IMSS obrero.
+        // Art. 36 de la Ley del Seguro Social.
+        if ($monthlySalary <= $this->salarioMinimoMensual) {
+            return 0.0;
+        }
+
+        $diasCotizadosMes = 30.4; // Promedio mensual
+        
+        // 2. Porcentajes de Ley (Cuota Obrera Fija)
+        $pctEspecie = 0.00375;  // Enf. y Mat. (Gastos Médicos Pensionados)
+        $pctDinero = 0.0025;    // Enf. y Mat. (Prestaciones en Dinero)
+        $pctInvalidez = 0.00625; // Invalidez y Vida
+        $pctCesantia = 0.01125;  // Cesantía en Edad Avanzada y Vejez
+        
+        // Suma base (2.375%)
+        $cuotaBaseDiaria = $sbc * ($pctEspecie + $pctDinero + $pctInvalidez + $pctCesantia);
+
+        // 3. Regla del Excedente (Más de 3 UMAs)
+        $cuotaExcedenteDiaria = 0.0;
+        $tresUmas = $this->umaDiaria * 3;
+        
+        if ($sbc > $tresUmas) {
+            $excedente = $sbc - $tresUmas;
+            $cuotaExcedenteDiaria = $excedente * 0.0040; // 0.40% sobre el excedente
+        }
+
+        // 4. Total mensual a retener
+        $retencionMensual = ($cuotaBaseDiaria + $cuotaExcedenteDiaria) * $diasCotizadosMes;
+
+        return round($retencionMensual, 2);
+    }
+
+    // ==========================================
+    // CÁLCULO FINAL DE NÓMINA
+    // ==========================================
+    public function calculatePayroll(Employee $employee): array
+    {
+        $monthlySalary = $employee->base_salary;
+
+        // 1. Retenciones de Ley (Obligatorias)
         $isrRetention = $this->calculateMonthlyISR($monthlySalary);
-        $imssRetention = 0.0; 
-        $netSalary = $monthlySalary - $isrRetention - $imssRetention;
+        $imssRetention = $this->calculateMonthlyIMSS($monthlySalary); 
+        
+        // 2. Salario Neto Base (Antes de deducciones personalizadas)
+        $netSalaryBase = $monthlySalary - $isrRetention - $imssRetention;
+
+        // 3. Procesamiento de Deducciones Personalizadas
+        $customDeductionsList = [];
+        $totalCustomDeductions = 0.0;
+
+        foreach ($employee->activeDeductions as $deduction) {
+            $amountToDeduct = 0.0;
+
+            switch ($deduction->amount_type) {
+                case 'fixed':
+                    // Monto fijo directo (Ej: $500 pesos de Caja de Ahorro)
+                    $amountToDeduct = $deduction->amount;
+                    break;
+
+                case 'percentage':
+                    // Porcentaje (Ej: 20% de Pensión Alimenticia). 
+                    // Regla legal: Se calcula sobre el Neto, después de impuestos de ley.
+                    $amountToDeduct = $netSalaryBase * ($deduction->amount / 100);
+                    break;
+
+                case 'vsm':
+                    // Factor Infonavit (Veces Salario Mínimo / UMI).
+                    // Fórmula mensual aprox: (Factor VSM * UMI Diaria * 30.4) + Seguro de Daños Infonavit ($15 aprox)
+                    $umiMensual = $this->umiDiaria * 30.4;
+                    $amountToDeduct = ($deduction->amount * $umiMensual) + 15.00; 
+                    break;
+            }
+
+            $totalCustomDeductions += $amountToDeduct;
+
+            $customDeductionsList[] = [
+                'sat_key' => $deduction->sat_key,
+                'description' => $deduction->description,
+                'amount' => round($amountToDeduct, 2)
+            ];
+        }
+
+        // 4. Salario Neto Final (Lo que realmente se le deposita)
+        $finalNetSalary = $netSalaryBase - $totalCustomDeductions;
 
         return [
             'gross_salary' => round($monthlySalary, 2),
             'isr_retention' => $isrRetention,
             'imss_retention' => $imssRetention,
-            'net_salary' => round($netSalary, 2),
+            'total_custom_deductions' => round($totalCustomDeductions, 2), // El total sumado
+            'custom_deductions' => $customDeductionsList, // El array con el desglose para el PDF
+            'net_salary' => round($finalNetSalary, 2),
         ];
     }
 }

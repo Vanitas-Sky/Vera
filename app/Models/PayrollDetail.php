@@ -17,6 +17,8 @@ class PayrollDetail extends Model
         'gross_salary',
         'isr_retention',
         'imss_employee',
+        'total_custom_deductions',      // <-- NUEVO
+        'custom_deductions_breakdown',
         'net_salary'
     ];
 
@@ -25,7 +27,9 @@ class PayrollDetail extends Model
         'isr_retention' => 'decimal:2',
         'imss_employee' => 'decimal:2',
         'net_salary' => 'decimal:2',
+        'custom_deductions_breakdown' => 'array'
     ];
+
 
     // CORRECCIÓN: El método debe llamarse 'period' para coincidir con el Controlador y la Vista.
     // Le pasamos 'payroll_period_id' para que Laravel no intente buscar una columna llamada 'period_id'.

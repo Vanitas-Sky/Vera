@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+            <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('Emitir Nueva Factura (Ingreso)') }}
             </h2>
         </div>

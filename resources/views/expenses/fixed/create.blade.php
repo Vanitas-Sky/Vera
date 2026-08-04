@@ -4,7 +4,7 @@
             <a href="{{ route('opex.index') }}" class="text-white hover:text-vera-green transition">
                 &larr; Volver
             </a>
-            <h2 class="font-semibold text-xl text-vera-dark leading-tight">
+            <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('Registrar Gasto Fijo (OpEx)') }}
             </h2>
         </div>

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>Recibo_Nomina_{{ $detail->employee->rfc }}</title>
     <style>
+        /* ... (Tus estilos CSS se mantienen intactos) ... */
         @page {
             margin: 30px 40px;
         }
@@ -266,21 +267,38 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if(!$isrBreakdown['is_minimum_wage'])
+                        <!-- Retención ISR -->
+                        @if($detail->isr_retention > 0)
                         <tr>
-                            <td>002 - ISR (Art. 96)</td>
+                            <td>002 - Retención ISR (Art. 96)</td>
                             <td class="text-right text-red-600">-${{ number_format($detail->isr_retention, 2) }}</td>
                         </tr>
                         @endif
+
+                        <!-- Retención IMSS -->
                         @if($detail->imss_employee > 0)
                         <tr>
-                            <td>001 - Cuota IMSS Trabajador</td>
+                            <td>001 - Retención IMSS (Cuota Obrera)</td>
                             <td class="text-right text-red-600">-${{ number_format($detail->imss_employee, 2) }}</td>
                         </tr>
                         @endif
-                        @if($isrBreakdown['is_minimum_wage'])
+
+                        <!-- ========================================== -->
+                        <!-- NUEVO: DEDUCCIONES PERSONALIZADAS          -->
+                        <!-- ========================================== -->
+                        @if($detail->total_custom_deductions > 0 && !empty($detail->custom_deductions_breakdown))
+                            @foreach($detail->custom_deductions_breakdown as $custom)
+                            <tr>
+                                <td>{{ str_pad($custom['sat_key'], 3, '0', STR_PAD_LEFT) }} - {{ $custom['description'] }}</td>
+                                <td class="text-right text-red-600">-${{ number_format($custom['amount'], 2) }}</td>
+                            </tr>
+                            @endforeach
+                        @endif
+
+                        <!-- Caso Salario Mínimo Totalmente Exento -->
+                        @if($detail->isr_retention == 0 && $detail->imss_employee == 0 && $detail->total_custom_deductions == 0)
                         <tr>
-                            <td><span style="color: #10b981;">Subsidio / Apoyo Salario Mínimo</span></td>
+                            <td><span style="color: #10b981;">Subsidio / Apoyo Salario Mínimo (Exento LISR y LSS)</span></td>
                             <td class="text-right">$0.00</td>
                         </tr>
                         @endif

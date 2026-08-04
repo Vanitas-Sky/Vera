@@ -38,6 +38,10 @@ Route::middleware(['auth', 'verified', EnsureUserHasCompany::class])->group(func
 
     // Módulo de Empleados
     Route::resource('employees', EmployeeController::class);
+    // Panel de Deducciones Personalizadas
+    Route::get('/employees/{employee}/deductions', [App\Http\Controllers\EmployeeDeductionController::class, 'index'])->name('employees.deductions.index');
+    Route::post('/employees/{employee}/deductions', [App\Http\Controllers\EmployeeDeductionController::class, 'store'])->name('employees.deductions.store');
+    Route::delete('/employees/{employee}/deductions/{deduction}', [App\Http\Controllers\EmployeeDeductionController::class, 'destroy'])->name('employees.deductions.destroy');
 
     // Módulo de Nómina
     Route::get('/payrolls', [PayrollController::class, 'index'])->name('payrolls.index');
