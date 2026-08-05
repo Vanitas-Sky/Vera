@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="{{ route('employees.show', $employee->id) }}" class="text-slate-500 hover:text-vera-green transition font-medium">
+            <a href="{{ route('employees.index') }}" class="text-slate-500 hover:text-vera-green transition font-medium">
                 &larr; Volver al Perfil
             </a>
             <h2 class="font-semibold text-xl text-vera-dark leading-tight">
@@ -16,7 +16,9 @@
             <!-- Alertas de Éxito o Error -->
             @if (session('success'))
             <div class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
                 {{ session('success') }}
             </div>
             @endif
@@ -33,16 +35,16 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
+
                 <!-- COLUMNA IZQUIERDA: Formulario de Nueva Deducción -->
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sticky top-6">
                         <h4 class="font-bold text-vera-dark border-b border-slate-100 pb-3 mb-4">Agregar Deducción</h4>
-                        
+
                         <form action="{{ route('employees.deductions.store', $employee->id) }}" method="POST">
                             @csrf
-                            
-                            <!-- Concepto -->
+
+                            <!-- Concepto (Restaurado) -->
                             <div class="mb-4">
                                 <label for="description" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Concepto / Descripción</label>
                                 <input type="text" name="description" id="description" required placeholder="Ej. Crédito Infonavit, Préstamo..."
@@ -55,39 +57,25 @@
                                 <label for="sat_key" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Clave SAT (3 dígitos)</label>
                                 <select name="sat_key" id="sat_key" required class="w-full border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm">
                                     <option value="">Selecciona una clave...</option>
-                                    <option value="004" @selected(old('sat_key') == '004')>004 - Préstamo empresa</option>
-                                    <option value="007" @selected(old('sat_key') == '007')>007 - Pensión alimenticia</option>
-                                    <option value="009" @selected(old('sat_key') == '009')>009 - Préstamo Infonavit</option>
-                                    <option value="010" @selected(old('sat_key') == '010')>010 - Pago por crédito de vivienda</option>
-                                    <option value="019" @selected(old('sat_key') == '019')>019 - Cuota sindical</option>
-                                    <option value="000" @selected(old('sat_key') == '000')>000 - Otra deducción</option>
+                                    <option value="004" @selected(old('sat_key')=='004' )>004 - Préstamo empresa</option>
+                                    <option value="007" @selected(old('sat_key')=='007' )>007 - Pensión alimenticia</option>
+                                    <option value="009" @selected(old('sat_key')=='009' )>009 - Préstamo Infonavit</option>
+                                    <option value="010" @selected(old('sat_key')=='010' )>010 - Pago por crédito de vivienda</option>
+                                    <option value="019" @selected(old('sat_key')=='019' )>019 - Cuota sindical</option>
+                                    <option value="000" @selected(old('sat_key')=='000' )>000 - Otra deducción</option>
                                 </select>
                                 @error('sat_key') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
 
-                            <!-- Tipo de Cálculo -->
+                            <!-- Naturaleza del Cálculo (Select Limpio) -->
                             <div class="mb-4">
-                                <label for="amount_type" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Método de Cálculo</label>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="amount_type" value="fixed" class="peer sr-only" @checked(old('amount_type', 'fixed') == 'fixed')>
-                                        <div class="text-center px-2 py-2 border border-slate-200 rounded-md text-xs font-bold text-slate-500 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 transition">
-                                            $ Fijo
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="amount_type" value="percentage" class="peer sr-only" @checked(old('amount_type') == 'percentage')>
-                                        <div class="text-center px-2 py-2 border border-slate-200 rounded-md text-xs font-bold text-slate-500 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 transition">
-                                            % Neto
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="amount_type" value="vsm" class="peer sr-only" @checked(old('amount_type') == 'vsm')>
-                                        <div class="text-center px-2 py-2 border border-slate-200 rounded-md text-xs font-bold text-slate-500 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 transition" title="Veces Salario Mínimo (Infonavit)">
-                                            VSM
-                                        </div>
-                                    </label>
-                                </div>
+                                <label for="amount_type" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Naturaleza del Cálculo</label>
+                                <select name="amount_type" id="amount_type" required class="w-full border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm">
+                                    <option value="fixed" @selected(old('amount_type') == 'fixed')>Monto Fijo en Dinero ($)</option>
+                                    <option value="percentage_gross" @selected(old('amount_type') == 'percentage_gross')>Porcentaje sobre Salario Bruto (%)</option>
+                                    <option value="percentage_net" @selected(old('amount_type') == 'percentage_net')>Porcentaje sobre Salario Neto (%)</option>
+                                    <option value="vsm" @selected(old('amount_type') == 'vsm')>Factor VSM (Infonavit / Fovissste)</option>
+                                </select>
                                 @error('amount_type') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
 
@@ -101,7 +89,7 @@
                                     <input type="number" step="0.0001" min="0.01" name="amount" id="amount" required placeholder="Ej. 500.00 o 25.5"
                                         class="pl-7 w-full border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm font-mono" value="{{ old('amount') }}">
                                 </div>
-                                <p class="text-[10px] text-slate-400 mt-1 leading-tight">Si es Fijo pon pesos. Si es % Neto pon del 1 al 100. Si es VSM pon el factor de descuento.</p>
+                                <p class="text-[10px] text-slate-400 mt-1 leading-tight">Ej: 500 para fijo, 2.5 para %, 14.3 para VSM.</p>
                                 @error('amount') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                             </div>
 
@@ -118,7 +106,7 @@
                         <div class="p-5 border-b border-slate-100 bg-slate-50">
                             <h4 class="font-bold text-vera-dark">Historial de Retenciones Asignadas</h4>
                         </div>
-                        
+
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-slate-200">
                                 <thead class="bg-white">
@@ -138,28 +126,32 @@
                                         </td>
                                         <td class="px-6 py-4">
                                             @if($deduction->amount_type == 'fixed')
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700">
-                                                    Monto Fijo: <span class="text-red-500">-${{ number_format($deduction->amount, 2) }}</span>
-                                                </span>
-                                            @elseif($deduction->amount_type == 'percentage')
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700">
-                                                    {{ rtrim(rtrim(number_format($deduction->amount, 4), '0'), '.') }}% del Salario Neto
-                                                </span>
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700">
+                                                Monto Fijo: <span class="text-red-500">-${{ number_format($deduction->amount, 2) }}</span>
+                                            </span>
+                                            @elseif($deduction->amount_type == 'percentage_gross')
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700" title="Calculado antes de impuestos">
+                                                {{ rtrim(rtrim(number_format($deduction->amount, 4), '0'), '.') }}% del S. Bruto
+                                            </span>
+                                            @elseif($deduction->amount_type == 'percentage_net')
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700" title="Calculado después de impuestos">
+                                                {{ rtrim(rtrim(number_format($deduction->amount, 4), '0'), '.') }}% del S. Neto
+                                            </span>
                                             @elseif($deduction->amount_type == 'vsm')
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700">
-                                                    Factor VSM: {{ $deduction->amount }}
-                                                </span>
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700">
+                                                Factor VSM: {{ $deduction->amount }}
+                                            </span>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 text-center whitespace-nowrap">
                                             @if($deduction->is_active)
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                    Cobrando
-                                                </span>
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                Cobrando
+                                            </span>
                                             @else
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-200 text-slate-600">
-                                                    Detenida
-                                                </span>
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-200 text-slate-600">
+                                                Detenida
+                                            </span>
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium">

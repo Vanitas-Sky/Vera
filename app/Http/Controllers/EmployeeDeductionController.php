@@ -38,15 +38,16 @@ class EmployeeDeductionController extends Controller
             abort(403);
         }
 
-        // Validación estricta
+        // VALIDACIÓN ACTUALIZADA CON LOS 4 TIPOS FISCALES
         $request->validate([
             'sat_key' => 'required|string|size:3',
             'description' => 'required|string|max:255',
-            'amount_type' => 'required|in:fixed,percentage,vsm',
+            'amount_type' => 'required|in:fixed,percentage_gross,percentage_net,vsm', // <-- Aquí está el cambio
             'amount' => 'required|numeric|min:0.01',
         ], [
             'sat_key.size' => 'La clave del SAT debe tener exactamente 3 caracteres (Ej: 004, 007).',
-            'amount.min' => 'El monto o porcentaje debe ser mayor a cero.',
+            'amount_type.in' => 'Selecciona un método de cálculo válido.',
+            'amount.min' => 'El valor debe ser mayor a cero.',
         ]);
 
         EmployeeDeduction::create([
