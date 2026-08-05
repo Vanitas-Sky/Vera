@@ -21,7 +21,10 @@ class InvoiceController extends Controller
 
         $search = $request->input('search');
         $status = $request->input('status', 'activas');
-        $type = $request->input('type', 'todas'); // Nuevo filtro
+        $type = $request->input('type', 'todas');
+
+        // Nuevo Filtro de Periodo (Por defecto el mes actual en formato YYYY-MM)
+        $period = $request->input('period', now()->format('Y-m'));
 
         $query = \App\Models\Invoice::where('company_id', $company->id);
 
@@ -37,6 +40,18 @@ class InvoiceController extends Controller
             $query->where('type', $type);
         }
 
+        // Nuevo Filtro por Fecha (Mes específico o Año completo)
+        if (!empty($period)) {
+            $year = substr($period, 0, 4);
+            $query->whereYear('issue_date', $year);
+
+            // Si la longitud es mayor a 4 (Ej. 2026-08), filtramos también por mes
+            if (strlen($period) > 4) {
+                $month = substr($period, 5, 2);
+                $query->whereMonth('issue_date', $month);
+            }
+        }
+
         // Búsqueda Profunda (Live Search)
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -45,17 +60,32 @@ class InvoiceController extends Controller
                     ->orWhere('issuer_rfc', 'LIKE', "%{$search}%")
                     ->orWhere('receiver_rfc', 'LIKE', "%{$search}%")
                     ->orWhere('uuid', 'LIKE', "%{$search}%")
-                    ->orWhere('items', 'LIKE', "%{$search}%") // Busca en los conceptos
+                    ->orWhere('items', 'LIKE', "%{$search}%")
                     ->orWhere('issue_date', 'LIKE', "%{$search}%");
             });
         }
 
+        // ==========================================
+        // CÁLCULO DE TOTALES (SENSIBLES A LOS FILTROS)
+        // ==========================================
+        // Clonamos el query ANTES de paginar para sacar la suma total de los registros filtrados
+        $totalAmount = (clone $query)->sum('total');
+        $totalIva = (clone $query)->sum('iva');
+
         // Paginación con persistencia de URL
         $invoices = $query->orderBy('issue_date', 'desc')
             ->paginate(10)
-            ->withQueryString(); // Esto ancla los filtros a la paginación
+            ->withQueryString();
 
-        return view('invoices.index', compact('invoices', 'search', 'status', 'type'));
+        return view('invoices.index', compact(
+            'invoices',
+            'search',
+            'status',
+            'type',
+            'period',
+            'totalAmount',
+            'totalIva'
+        ));
     }
     public function store(Request $request, \App\Services\XmlParserService $parser)
     {

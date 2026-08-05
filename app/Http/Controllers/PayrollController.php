@@ -117,11 +117,11 @@ class PayrollController extends Controller
                     'gross_salary' => $calculation['gross_salary'],
                     'isr_retention' => $calculation['isr_retention'],
                     'imss_employee' => $calculation['imss_retention'],
-                    
+
                     // CONECTAMOS LAS DEDUCCIONES PERSONALIZADAS
                     'total_custom_deductions' => $calculation['total_custom_deductions'],
-                    'custom_deductions_breakdown' => $calculation['custom_deductions'], 
-                    
+                    'custom_deductions_breakdown' => $calculation['custom_deductions'],
+
                     'net_salary' => $calculation['net_salary'],
                 ]);
 
@@ -152,20 +152,37 @@ class PayrollController extends Controller
         }
     }
 
-    public function show($id, PayrollCalculatorService $payrollService)
+    public function show($id, Request $request, PayrollCalculatorService $payrollService)
     {
         $company = Auth::user()->companies()->first();
 
+        // 1. Capturamos el término de búsqueda
+        $search = $request->input('search');
+
+        // 2. Cargamos el periodo y filtramos la relación de detalles
         $period = PayrollPeriod::where('company_id', $company->id)
-            ->with(['details.employee'])
+            ->with(['details' => function ($query) use ($search) {
+                // Siempre cargamos al empleado para evitar el problema N+1
+                $query->with('employee');
+
+                // Si hay búsqueda, filtramos desde la base de datos
+                if ($search) {
+                    $query->whereHas('employee', function ($q) use ($search) {
+                        // Ajusta 'name' y 'last_name' al nombre exacto de tus columnas en la BD
+                        $q->where('full_name', 'LIKE', "%{$search}%")
+                            ->orWhere('rfc', 'LIKE', "%{$search}%");
+                    });
+                }
+            }])
             ->findOrFail($id);
 
-        // Inyectamos la memoria de cálculo dinámicamente a cada recibo
+        // 3. Inyectamos la memoria de cálculo solo a los recibos que pasaron el filtro
         foreach ($period->details as $detail) {
             $detail->isr_breakdown = $payrollService->getIsrBreakdown($detail->gross_salary);
         }
 
-        return view('payrolls.show', compact('period'));
+        // Retornamos también el $search para que el input de la vista mantenga el texto escrito
+        return view('payrolls.show', compact('period', 'search'));
     }
 
     public function destroy($id)

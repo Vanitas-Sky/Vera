@@ -33,6 +33,53 @@
                 </div>
             </div>
 
+            <!-- BUSCADOR DE EMPLEADOS DENTRO DE LA NÓMINA -->
+            <form method="GET" action="{{ route('payrolls.show', $period->id) }}" id="searchForm" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-center">
+                <div class="flex-1 w-full relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input type="text" name="search" id="searchInput" value="{{ request('search') }}" placeholder="Buscar por Nombre, Apellidos o RFC del empleado..."
+                        class="w-full pl-10 border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm transition">
+                </div>
+
+                @if(request('search'))
+                <a href="{{ route('payrolls.show', $period->id) }}" class="px-4 py-2 bg-white border border-slate-300 text-slate-500 font-bold rounded-md hover:bg-slate-50 hover:text-red-500 transition shadow-sm text-sm">
+                    Limpiar Búsqueda
+                </a>
+                @endif
+            </form>
+
+            <!-- Script de Auto-Búsqueda -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const searchInput = document.getElementById('searchInput');
+                    const form = document.getElementById('searchForm');
+                    let timeout = null;
+
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(timeout);
+                        // Espera 600ms después de que el usuario deje de teclear para buscar
+                        timeout = setTimeout(() => {
+                            form.submit();
+                        }, 600);
+                    });
+                });
+            </script>
+
+            <!-- MENSAJE SI NO HAY RESULTADOS -->
+            @if($period->details->isEmpty())
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">No se encontraron empleados</h3>
+                <p class="text-xs text-slate-400 mt-1">No hay recibos que coincidan con la búsqueda "{{ request('search') }}".</p>
+            </div>
+            @endif
+
             <!-- Desglose por Empleado -->
             @foreach($period->details as $detail)
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6 mb-6">
