@@ -25,6 +25,8 @@ class OnboardingController extends Controller
             'legal_name' => 'required|string|max:255',
             'postal_code' => ['required', 'string', 'regex:/^(?!00000)[0-9]{5}$/'], // Restringido exactamente a 5 caracteres
             'tax_regime_code' => 'required|exists:sat_tax_regimes,code',
+            // En las reglas de validación de $request->validate([...])
+            'industry' => 'nullable|string|max:150',
         ]);
 
         // 2. Crear la Empresa
@@ -33,6 +35,7 @@ class OnboardingController extends Controller
             'legal_name' => $request->legal_name,
             'postal_code' => $request->postal_code,
             'tax_regime_code' => $request->tax_regime_code,
+            'industry' => $request->industry,
         ]);
 
         // 3. Vincular al usuario actual como ADMIN_PYME usando la tabla pivote

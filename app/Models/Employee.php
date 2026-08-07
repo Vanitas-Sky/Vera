@@ -21,6 +21,8 @@ class Employee extends Model
         'clabe',
         'hire_date',
         'base_salary',
+        'work_regime',
+        'periodicity',
         'is_active'
     ];
 

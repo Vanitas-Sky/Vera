@@ -21,6 +21,7 @@ class Company extends Model
         'legal_name',
         'trade_name',
         'postal_code',
+        'industry',
         'tax_regime_code',
         'pac_api_key_sandbox',
     ];

@@ -17,10 +17,6 @@ class PayrollController extends Controller
 {
     protected $payrollService;
 
-    /**
-     * Inyección de Dependencias:
-     * Laravel lee esto y automáticamente nos entrega una instancia de nuestro servicio matemático.
-     */
     public function __construct(PayrollCalculatorService $payrollService)
     {
         $this->payrollService = $payrollService;
@@ -34,23 +30,16 @@ class PayrollController extends Controller
             return redirect()->route('companies.create')->with('error', 'Registra tu empresa primero.');
         }
 
-        // 1. Recibir el parámetro (Formato HTML5: YYYY-MM)
         $period = $request->input('period');
-
-        // 2. Query Builder
         $query = \App\Models\PayrollPeriod::where('company_id', $company->id);
 
-        // 3. Aplicar filtro si el usuario seleccionó un mes
         if ($period) {
             $year = substr($period, 0, 4);
             $month = substr($period, 5, 2);
-
-            // Asumiendo que el campo de fecha en tu tabla se llama start_date
             $query->whereYear('start_date', $year)
                 ->whereMonth('start_date', $month);
         }
 
-        // 4. Paginación
         $periods = $query->orderBy('start_date', 'desc')
             ->paginate(10)
             ->withQueryString();
@@ -62,7 +51,6 @@ class PayrollController extends Controller
     {
         $company = Auth::user()->companies()->first();
 
-        // 1. Obtener empleados activos
         $employees = Employee::where('company_id', $company->id)
             ->where('is_active', true)
             ->get();
@@ -71,7 +59,6 @@ class PayrollController extends Controller
             return redirect()->back()->with('error', 'No tienes empleados activos para calcular.');
         }
 
-        // Evitar duplicidad: Revisar si ya existe una nómina calculada este mes
         $existingPeriod = PayrollPeriod::where('company_id', $company->id)
             ->whereMonth('start_date', now()->month)
             ->whereYear('start_date', now()->year)
@@ -81,11 +68,9 @@ class PayrollController extends Controller
             return redirect()->back()->with('error', 'Ya generaste la nómina de este mes. Si necesitas recalcular, primero debes cancelarla.');
         }
 
-        // 2. Iniciamos el blindaje de la base de datos
         DB::beginTransaction();
 
         try {
-            // 1. Creamos el periodo (Inicializando los totales en 0 para evitar error de nulos)
             $periodName = 'Nómina - ' . ucfirst(now()->translatedFormat('F Y'));
 
             $period = PayrollPeriod::create([
@@ -100,53 +85,73 @@ class PayrollController extends Controller
                 'total_net' => 0,
             ]);
 
-            // Variables para acumular el dinero
             $sumGross = 0;
             $sumIsr = 0;
             $sumImss = 0;
             $sumNet = 0;
 
-            // 2. Calculamos los recibos y vamos sumando
             foreach ($employees as $employee) {
-                // Ahora le pasamos el objeto $employee completo
+                // 1. Identificar la periodicidad del empleado
+                $periodicity = $employee->periodicity ?? 'mensual';
+
+                // 2. Definir el factor de consolidación mensual
+                $factor = match ($periodicity) {
+                    'quincenal' => 2,
+                    'semanal' => 30.4 / 7, // Proporción exacta mensual (4.3428)
+                    default => 1,
+                };
+
+                // 3. El servicio nos devuelve los cálculos de 1 SOLO PERIODO (1 quincena, 1 semana)
                 $calculation = $this->payrollService->calculatePayroll($employee);
 
+                // 4. Multiplicamos todos los rubros por el factor para tener el CONSOLIDADO MENSUAL
+                $consolidatedGross = $calculation['gross_salary'] * $factor;
+                $consolidatedIsr = $calculation['isr_retention'] * $factor;
+                $consolidatedImss = $calculation['imss_retention'] * $factor;
+                $consolidatedCustomTotal = $calculation['total_custom_deductions'] * $factor;
+                $consolidatedNet = $calculation['net_salary'] * $factor;
+
+                // Consolidar el array del detalle de deducciones
+                $consolidatedCustomBreakdown = [];
+                foreach ($calculation['custom_deductions'] as $cd) {
+                    $consolidatedCustomBreakdown[] = [
+                        'sat_key' => $cd['sat_key'],
+                        'description' => $cd['description'],
+                        'amount' => round($cd['amount'] * $factor, 2)
+                    ];
+                }
+
+                // Guardar los datos mensuales consolidados en la Base de Datos
                 PayrollDetail::create([
                     'payroll_period_id' => $period->id,
                     'employee_id' => $employee->id,
-                    'gross_salary' => $calculation['gross_salary'],
-                    'isr_retention' => $calculation['isr_retention'],
-                    'imss_employee' => $calculation['imss_retention'],
-
-                    // CONECTAMOS LAS DEDUCCIONES PERSONALIZADAS
-                    'total_custom_deductions' => $calculation['total_custom_deductions'],
-                    'custom_deductions_breakdown' => $calculation['custom_deductions'],
-
-                    'net_salary' => $calculation['net_salary'],
+                    'gross_salary' => round($consolidatedGross, 2),
+                    'isr_retention' => round($consolidatedIsr, 2),
+                    'imss_employee' => round($consolidatedImss, 2),
+                    'total_custom_deductions' => round($consolidatedCustomTotal, 2),
+                    'custom_deductions_breakdown' => $consolidatedCustomBreakdown,
+                    'net_salary' => round($consolidatedNet, 2),
                 ]);
 
-                $sumGross += $calculation['gross_salary'];
-                $sumIsr += $calculation['isr_retention'];
-                $sumImss += $calculation['imss_retention'];
-                $sumNet += $calculation['net_salary'];
-                // Nota: $sumNet ya viene con las deducciones restadas desde el servicio, así que la contabilidad global cuadrará perfecto.
+                $sumGross += $consolidatedGross;
+                $sumIsr += $consolidatedIsr;
+                $sumImss += $consolidatedImss;
+                $sumNet += $consolidatedNet;
             }
 
-            // 3. Actualizamos el periodo central con los totales reales
+            // Actualizar la carátula global del mes
             $period->update([
                 'total_gross' => $sumGross,
                 'total_isr_retention' => $sumIsr,
                 'total_imss_employee' => $sumImss,
-                'total_imss_employer' => 0, // Aún no calculamos cuotas patronales
+                'total_imss_employer' => 0,
                 'total_net' => $sumNet,
             ]);
 
-            // 4. Si todo salió perfecto, guardamos permanentemente en la base de datos
             DB::commit();
 
             return redirect()->route('payrolls.index')->with('success', 'Nómina calculada y guardada con éxito.');
         } catch (\Exception $e) {
-            // Si algo falla, revertimos absolutamente todo para no corromper los datos
             DB::rollBack();
             return redirect()->back()->with('error', 'Error crítico al calcular la nómina: ' . $e->getMessage());
         }
@@ -155,20 +160,13 @@ class PayrollController extends Controller
     public function show($id, Request $request, PayrollCalculatorService $payrollService)
     {
         $company = Auth::user()->companies()->first();
-
-        // 1. Capturamos el término de búsqueda
         $search = $request->input('search');
 
-        // 2. Cargamos el periodo y filtramos la relación de detalles
         $period = PayrollPeriod::where('company_id', $company->id)
             ->with(['details' => function ($query) use ($search) {
-                // Siempre cargamos al empleado para evitar el problema N+1
                 $query->with('employee');
-
-                // Si hay búsqueda, filtramos desde la base de datos
                 if ($search) {
                     $query->whereHas('employee', function ($q) use ($search) {
-                        // Ajusta 'name' y 'last_name' al nombre exacto de tus columnas en la BD
                         $q->where('full_name', 'LIKE', "%{$search}%")
                             ->orWhere('rfc', 'LIKE', "%{$search}%");
                     });
@@ -176,33 +174,38 @@ class PayrollController extends Controller
             }])
             ->findOrFail($id);
 
-        // 3. Inyectamos la memoria de cálculo solo a los recibos que pasaron el filtro
         foreach ($period->details as $detail) {
-            $detail->isr_breakdown = $payrollService->getIsrBreakdown($detail->gross_salary);
+            $periodicity = $detail->employee->periodicity ?? 'mensual';
+            $factor = match ($periodicity) {
+                'quincenal' => 2,
+                'semanal' => 30.4 / 7,
+                default => 1,
+            };
+
+            // Salario Bruto de 1 solo periodo
+            $periodGross = $detail->gross_salary / $factor;
+            $detail->isr_breakdown = $payrollService->getIsrBreakdown($periodGross, $periodicity);
+
+            $detail->periodicity_label = ucfirst($periodicity);
+            $detail->multiplier = round($factor, 2);
+
+            // NUEVO: Dinero real depositado en cada corte (Semana o Quincena)
+            $detail->net_per_period = $detail->net_salary / $factor;
         }
 
-        // Retornamos también el $search para que el input de la vista mantenga el texto escrito
         return view('payrolls.show', compact('period', 'search'));
     }
 
     public function destroy($id)
     {
         $company = Auth::user()->companies()->first();
-
-        // Aseguramos que el periodo pertenezca a la empresa actual
         $period = PayrollPeriod::where('company_id', $company->id)->findOrFail($id);
 
         try {
             DB::beginTransaction();
-
-            // 1. Borramos los detalles (recibos de los empleados)
             $period->details()->delete();
-
-            // 2. Borramos el periodo central
             $period->delete();
-
             DB::commit();
-
             return redirect()->route('payrolls.index')->with('success', 'Nómina eliminada correctamente. El mes ha quedado liberado para un nuevo cálculo.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -214,23 +217,27 @@ class PayrollController extends Controller
     {
         $company = Auth::user()->companies()->first();
 
-        // Buscamos el recibo asegurándonos de que la nómina pertenezca a la empresa logueada
         $detail = PayrollDetail::whereHas('period', function ($query) use ($company) {
             $query->where('company_id', $company->id);
         })->with(['employee', 'period'])->findOrFail($id);
 
-        // Calculamos el desglose para mostrar la retención en el PDF
-        $isrBreakdown = $payrollService->getIsrBreakdown($detail->gross_salary);
+        $periodicity = $detail->employee->periodicity ?? 'mensual';
+        $factor = match ($periodicity) {
+            'quincenal' => 2,
+            'semanal' => 30.4 / 7,
+            default => 1,
+        };
 
-        // Generamos un QR simulado (Igual que en las facturas)
+        // Revertir el salario al periodo base para calcular correctamente los nodos del ISR
+        $periodGross = $detail->gross_salary / $factor;
+        $isrBreakdown = $payrollService->getIsrBreakdown($periodGross, $periodicity);
+
         $selloSimulado = "x8Yz9==";
         $urlSat = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=SIMULADO-NOMINA-{$detail->id}&re={$company->rfc}&rr={$detail->employee->rfc}";
         $qrCode = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(120)->margin(0)->generate($urlSat));
 
-        // Cargamos la vista de dompdf
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payrolls.pdf', compact('company', 'detail', 'isrBreakdown', 'qrCode'));
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payrolls.pdf', compact('company', 'detail', 'isrBreakdown', 'qrCode', 'periodicity', 'factor'));
 
-        // Descargamos el archivo
         return $pdf->download('Recibo_Nomina_' . $detail->employee->rfc . '_' . $detail->period->start_date->format('mY') . '.pdf');
     }
 
@@ -238,8 +245,6 @@ class PayrollController extends Controller
     {
         $company = \Illuminate\Support\Facades\Auth::user()->companies()->first();
         $period = PayrollPeriod::where('company_id', $company->id)->findOrFail($id);
-
-        // Traemos todos los detalles de nómina de ese mes, con la data del empleado
         $details = PayrollDetail::with('employee')->where('payroll_period_id', $period->id)->get();
 
         $enviados = 0;
@@ -248,24 +253,28 @@ class PayrollController extends Controller
         foreach ($details as $detail) {
             $employee = $detail->employee;
 
-            // Si no tiene correo, lo saltamos
             if (!$employee->email) {
                 $sinCorreo++;
                 continue;
             }
 
-            // 1. REGLA DE ORO: Construir los datos obligatorios para el PDF fiscal
-            $isrBreakdown = $payrollService->getIsrBreakdown($detail->gross_salary);
+            $periodicity = $employee->periodicity ?? 'mensual';
+            $factor = match ($periodicity) {
+                'quincenal' => 2,
+                'semanal' => 30.4 / 7,
+                default => 1,
+            };
+
+            $periodGross = $detail->gross_salary / $factor;
+            $isrBreakdown = $payrollService->getIsrBreakdown($periodGross, $periodicity);
+
             $urlSat = "https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=SIMULADO-NOMINA-{$detail->id}&re={$company->rfc}&rr={$employee->rfc}";
             $qrCode = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(120)->margin(0)->generate($urlSat));
 
-            // 2. Generar el PDF usando la vista CORRECTA (payrolls.pdf)
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payrolls.pdf', compact('company', 'detail', 'isrBreakdown', 'qrCode'));
-            $pdfContent = $pdf->output(); // Genera el binario del PDF en memoria
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payrolls.pdf', compact('company', 'detail', 'isrBreakdown', 'qrCode', 'periodicity', 'factor'));
+            $pdfContent = $pdf->output();
 
-            // 3. Enviar el correo (El Mailable ya sabe que debe usar emails.payslip para el mensaje)
             Mail::to($employee->email)->send(new PayslipEmail($employee, $period->period_name, $pdfContent));
-
             $enviados++;
         }
 
