@@ -7,11 +7,11 @@
 
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            
+
             @if (session('success'))
-                <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm font-medium">
-                    {{ session('success') }}
-                </div>
+            <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm font-medium">
+                {{ session('success') }}
+            </div>
             @endif
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-8">
@@ -51,12 +51,32 @@
                             <select name="tax_regime_code" class="w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring-vera-green bg-slate-50">
                                 <option value="">Selecciona tu régimen oficial...</option>
                                 @foreach($regimenesSAT as $codigo => $descripcion)
-                                    <option value="{{ $codigo }}" {{ old('tax_regime_code', $company->tax_regime_code) == $codigo ? 'selected' : '' }}>
-                                        {{ $codigo }} - {{ $descripcion }}
-                                    </option>
+                                <option value="{{ $codigo }}" {{ old('tax_regime_code', $company->tax_regime_code) == $codigo ? 'selected' : '' }}>
+                                    {{ $codigo }} - {{ $descripcion }}
+                                </option>
                                 @endforeach
                             </select>
                             @error('tax_regime_code') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                        </div>
+
+                        <!-- Giro Específico / Actividad Económica -->
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Giro o Actividad Económica principal</label>
+                            <select name="industry" class="w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring focus:ring-emerald-200 text-sm">
+                                <option value="">Selecciona un giro (Opcional)...</option>
+                                <option value="Construcción e Inmobiliaria" @selected(old('industry', $company->industry ?? '') == 'Construcción e Inmobiliaria')>Construcción e Inmobiliaria</option>
+                                <option value="Hotelería y Turismo" @selected(old('industry', $company->industry ?? '') == 'Hotelería y Turismo')>Hotelería y Turismo</option>
+                                <option value="Restaurantes y Alimentos" @selected(old('industry', $company->industry ?? '') == 'Restaurantes y Alimentos')>Restaurantes y Alimentos</option>
+                                <option value="Transporte y Logística" @selected(old('industry', $company->industry ?? '') == 'Transporte y Logística')>Transporte y Logística</option>
+                                <option value="Comercio al por Mayor / Menor" @selected(old('industry', $company->industry ?? '') == 'Comercio al por Mayor / Menor')>Comercio al por Mayor / Menor</option>
+                                <option value="Servicios Profesionales y Consultoría" @selected(old('industry', $company->industry ?? '') == 'Servicios Profesionales y Consultoría')>Servicios Profesionales y Consultoría</option>
+                                <option value="Tecnologías de la Información (TI)" @selected(old('industry', $company->industry ?? '') == 'Tecnologías de la Información (TI)')>Tecnologías de la Información (TI)</option>
+                                <option value="Manufactura y Producción" @selected(old('industry', $company->industry ?? '') == 'Manufactura y Producción')>Manufactura y Producción</option>
+                                <option value="Agricultura y Ganadería" @selected(old('industry', $company->industry ?? '') == 'Agricultura y Ganadería')>Agricultura y Ganadería</option>
+                                <option value="Otro" @selected(old('industry', $company->industry ?? '') == 'Otro')>Otro</option>
+                            </select>
+                            <p class="text-[11px] text-slate-400 mt-1">Dato informativo para la carátula del Perfil Fiscal.</p>
+                            @error('industry') <span class="text-xs font-bold text-red-500 block mt-1">⚠️ {{ $message }}</span> @enderror
                         </div>
                     </div>
 

@@ -39,6 +39,7 @@ class CompanyProfileController extends Controller
             'rfc' => ['required', 'string', new ValidRfc],
             'postal_code' => ['required', 'string', 'regex:/^(?!00000)[0-9]{5}$/'],
             'tax_regime_code' => 'required|string|max:3',
+            'industry' => 'nullable|string|max:150',
         ]);
 
         $company->update($validated);

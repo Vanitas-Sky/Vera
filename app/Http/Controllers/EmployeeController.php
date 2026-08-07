@@ -66,14 +66,17 @@ class EmployeeController extends Controller
     {
         $company = Auth::user()->companies()->first();
 
-        // Validación estricta de datos (incluyendo los nuevos)
+        // Validación estricta de datos
         $request->validate([
             'rfc' => ['required', 'string', new ValidRfc],
             'curp' => ['required', 'string', new ValidCurp],
             'full_name' => 'required|string|max:255',
             'nss' => ['required', 'string', new ValidNss],
             'base_salary' => 'required|numeric|min:0',
-            // Nuevos campos
+            // NUEVO: Validación de Periodo y Régimen SAT
+            'periodicity' => 'required|in:mensual,quincenal,semanal',
+            'work_regime' => 'required|string|max:100',
+            // Campos Opcionales
             'email' => 'nullable|email|max:255',
             'position' => 'nullable|string|max:255',
             'cp' => ['nullable', 'string', 'regex:/^(?!00000)[0-9]{5}$/'],
@@ -81,9 +84,10 @@ class EmployeeController extends Controller
             'hire_date' => 'nullable|date',
         ], [
             'cp.regex' => 'El Código Postal debe tener 5 dígitos y no puede ser 00000.',
+            'periodicity.in' => 'Selecciona un periodo de pago válido.',
         ]);
 
-        // Inserción asegurando el company_id
+        // Inserción
         Employee::create([
             'company_id' => $company->id,
             'rfc' => strtoupper($request->rfc),
@@ -91,6 +95,8 @@ class EmployeeController extends Controller
             'full_name' => $request->full_name,
             'nss' => $request->nss,
             'base_salary' => $request->base_salary,
+            'periodicity' => $request->periodicity, // NUEVO
+            'work_regime' => $request->work_regime, // NUEVO
             'email' => $request->email,
             'position' => $request->position,
             'cp' => $request->cp,
@@ -128,7 +134,10 @@ class EmployeeController extends Controller
             'full_name' => 'required|string|max:255',
             'nss' => ['required', 'string', new ValidNss],
             'base_salary' => 'required|numeric|min:0',
-            // Nuevos campos
+            // NUEVO: Validación
+            'periodicity' => 'required|in:mensual,quincenal,semanal',
+            'work_regime' => 'required|string|max:100',
+            // Campos Opcionales
             'email' => 'nullable|email|max:255',
             'position' => 'nullable|string|max:255',
             'cp' => ['nullable', 'string', 'regex:/^(?!00000)[0-9]{5}$/'],
@@ -136,6 +145,7 @@ class EmployeeController extends Controller
             'hire_date' => 'nullable|date',
         ], [
             'cp.regex' => 'El Código Postal debe tener 5 dígitos y no puede ser 00000.',
+            'periodicity.in' => 'Selecciona un periodo de pago válido.',
         ]);
 
         $employee->update([
@@ -144,6 +154,8 @@ class EmployeeController extends Controller
             'full_name' => $request->full_name,
             'nss' => $request->nss,
             'base_salary' => $request->base_salary,
+            'periodicity' => $request->periodicity, // NUEVO
+            'work_regime' => $request->work_regime, // NUEVO
             'email' => $request->email,
             'position' => $request->position,
             'cp' => $request->cp,

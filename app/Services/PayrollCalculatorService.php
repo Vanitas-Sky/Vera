@@ -2,24 +2,33 @@
 
 namespace App\Services;
 
-use App\Models\Employee; // <-- IMPORTANTE: Agregar esta línea
+use App\Models\Employee;
 
+/**
+ * Motor Fiscal Centralizado (Mensual, Quincenal, Semanal)
+ * Basado en el Anexo 8 de la RMF 2026 (DOF 28-dic-2025)
+ */
 class PayrollCalculatorService
 {
     // ==========================================
-    // VARIABLES FISCALES DE LEY (2026)
+    // VARIABLES FISCALES DE LEY GLOBALES (2026)
     // ==========================================
-    private float $umaDiaria = 117.31; // UMA Diaria 2026 (INEGI/DOF 09-ene-2026, vigente desde 01-feb-2026) - para cálculo IMSS
-    private float $umaMensual = 3566.22; // UMA Mensual 2026
-    private float $umiDiaria = 100.81; // UMI 2026 congelada sin incremento (Infonavit, 3er año consecutivo en $100.81)
-    private float $topeMensualSubsidio = 11492.66; // Tope de ingresos para Subsidio al Empleo 2026 (Decreto DOF 31-dic-2025)
-    private float $salarioMinimoMensual = 9577.22; // $315.04 * 30.4 días (Zona General, CONASAMI/DOF 09-dic-2025, vigente desde 01-ene-2026)
-
-    // Factor de Integración Mínimo de Ley (Aguinaldo 15 días, Prima Vacacional 25% de 12 días)
-    // Fórmula: 1 + (15/365) + ((12*0.25)/365) = 1.0493
+    private float $umaDiaria = 117.31;
+    private float $umaMensual = 3566.22;
+    private float $umiDiaria = 100.81;
     private float $factorIntegracionBasico = 1.0493;
 
-    // Tarifa mensual Art. 96 LISR - Anexo 8 RMF 2026 (DOF 28-dic-2025), factor de actualización 1.1321
+    // Subsidio al Empleo (Bases mensuales prorrateables)
+    private float $topeMensualSubsidio = 11492.66;
+    
+    // Salario Mínimo (Zona General)
+    private float $salarioMinimoDiario = 315.04;
+
+    // ==========================================
+    // TABLAS ISR (Anexo 8 RMF 2026)
+    // ==========================================
+    
+    // Fracción VI (Mensual)
     private array $monthlyIsrTable = [
         ['lower' => 0.01, 'upper' => 844.59, 'fixed_fee' => 0.00, 'rate' => 0.0192],
         ['lower' => 844.60, 'upper' => 7168.51, 'fixed_fee' => 16.22, 'rate' => 0.0640],
@@ -34,36 +43,91 @@ class PayrollCalculatorService
         ['lower' => 425642.00, 'upper' => 999999999.00, 'fixed_fee' => 133488.54, 'rate' => 0.3500],
     ];
 
+    // Fracción IV (Quincenal - 15 días)
+    private array $quincenalIsrTable = [
+        ['lower' => 0.01, 'upper' => 416.70, 'fixed_fee' => 0.00, 'rate' => 0.0192],
+        ['lower' => 416.71, 'upper' => 3537.15, 'fixed_fee' => 7.95, 'rate' => 0.0640],
+        ['lower' => 3537.16, 'upper' => 6216.15, 'fixed_fee' => 207.75, 'rate' => 0.1088],
+        ['lower' => 6216.16, 'upper' => 7225.95, 'fixed_fee' => 499.20, 'rate' => 0.1600],
+        ['lower' => 7225.96, 'upper' => 8651.40, 'fixed_fee' => 660.75, 'rate' => 0.1792],
+        ['lower' => 8651.41, 'upper' => 17448.75, 'fixed_fee' => 916.20, 'rate' => 0.2136],
+        ['lower' => 17448.76, 'upper' => 27501.60, 'fixed_fee' => 2795.25, 'rate' => 0.2352],
+        ['lower' => 27501.61, 'upper' => 52505.25, 'fixed_fee' => 5159.70, 'rate' => 0.3000],
+        ['lower' => 52505.26, 'upper' => 70006.95, 'fixed_fee' => 12660.75, 'rate' => 0.3200],
+        ['lower' => 70006.96, 'upper' => 210020.70, 'fixed_fee' => 18261.30, 'rate' => 0.3400],
+        ['lower' => 210020.71, 'upper' => 999999999.00, 'fixed_fee' => 65866.05, 'rate' => 0.3500],
+    ];
+
+    // Fracción II (Semanal - 7 días)
+    private array $semanalIsrTable = [
+        ['lower' => 0.01, 'upper' => 194.46, 'fixed_fee' => 0.00, 'rate' => 0.0192],
+        ['lower' => 194.47, 'upper' => 1650.67, 'fixed_fee' => 3.71, 'rate' => 0.0640],
+        ['lower' => 1650.68, 'upper' => 2900.87, 'fixed_fee' => 96.95, 'rate' => 0.1088],
+        ['lower' => 2900.88, 'upper' => 3372.11, 'fixed_fee' => 232.96, 'rate' => 0.1600],
+        ['lower' => 3372.12, 'upper' => 4037.32, 'fixed_fee' => 308.35, 'rate' => 0.1792],
+        ['lower' => 4037.33, 'upper' => 8142.75, 'fixed_fee' => 427.56, 'rate' => 0.2136],
+        ['lower' => 8142.76, 'upper' => 12834.08, 'fixed_fee' => 1304.45, 'rate' => 0.2352],
+        ['lower' => 12834.09, 'upper' => 24502.45, 'fixed_fee' => 2407.86, 'rate' => 0.3000],
+        ['lower' => 24502.46, 'upper' => 32669.91, 'fixed_fee' => 5908.35, 'rate' => 0.3200],
+        ['lower' => 32669.92, 'upper' => 98009.66, 'fixed_fee' => 8521.94, 'rate' => 0.3400],
+        ['lower' => 98009.67, 'upper' => 999999999.00, 'fixed_fee' => 30737.49, 'rate' => 0.3500],
+    ];
+
     // ==========================================
-    // MÉTODOS ISR (Tu código intacto)
+    // HELPERS DE PERIODO
     // ==========================================
-    private function calculateSubsidy(float $monthlySalary): float
+    private function getPeriodDays(string $periodicity): float
     {
-        // Subsidio al Empleo 2026: 15.02% de la UMA mensual (Decreto DOF 31-dic-2025)
-        // Nota: enero 2026 usa un porcentaje transitorio de 15.59% sobre la UMA 2025 ($536.21);
-        // de febrero a diciembre aplica 15.02% sobre la UMA 2026 ($535.65). Aquí se usa la tasa
-        // general (feb-dic); si necesitas el mes de enero exacto, aplica 0.1559 solo para ese mes.
-        if ($monthlySalary > 0 && $monthlySalary <= $this->topeMensualSubsidio) {
-            return round($this->umaMensual * 0.1502, 2);
+        return match ($periodicity) {
+            'quincenal' => 15.0,
+            'semanal' => 7.0,
+            default => 30.4, // Mensual
+        };
+    }
+
+    private function getIsrTable(string $periodicity): array
+    {
+        return match ($periodicity) {
+            'quincenal' => $this->quincenalIsrTable,
+            'semanal' => $this->semanalIsrTable,
+            default => $this->monthlyIsrTable,
+        };
+    }
+
+    // ==========================================
+    // MÉTODOS ISR
+    // ==========================================
+    private function calculateSubsidy(float $salary, string $periodicity): float
+    {
+        $days = $this->getPeriodDays($periodicity);
+        $topeSubsidio = round(($this->topeMensualSubsidio / 30.4) * $days, 2);
+
+        if ($salary > 0 && $salary <= $topeSubsidio) {
+            $subsidioDiario = ($this->umaMensual * 0.1502) / 30.4;
+            return round($subsidioDiario * $days, 2);
         }
         return 0.0;
     }
 
-    public function calculateMonthlyISR(float $monthlySalary): float
+    public function calculateISR(float $salary, string $periodicity): float
     {
-        // REGLA DE ORO: Escudo del Salario Mínimo (Art. 96 LISR)
-        if ($monthlySalary <= $this->salarioMinimoMensual) {
+        $days = $this->getPeriodDays($periodicity);
+        $salarioMinimoPeriodo = $this->salarioMinimoDiario * $days;
+
+        if ($salary <= $salarioMinimoPeriodo) {
             return 0.0;
         }
 
-        foreach ($this->monthlyIsrTable as $row) {
-            if ($monthlySalary >= $row['lower'] && $monthlySalary <= $row['upper']) {
-                $surplus = $monthlySalary - $row['lower'];
+        $table = $this->getIsrTable($periodicity);
+
+        foreach ($table as $row) {
+            if ($salary >= $row['lower'] && $salary <= $row['upper']) {
+                $surplus = $salary - $row['lower'];
                 $marginalTax = $surplus * $row['rate'];
-
+                
                 $calculatedIsr = $row['fixed_fee'] + $marginalTax;
-                $subsidy = $this->calculateSubsidy($monthlySalary);
-
+                $subsidy = $this->calculateSubsidy($salary, $periodicity);
+                
                 $finalIsr = $calculatedIsr - $subsidy;
                 return $finalIsr > 0 ? round($finalIsr, 2) : 0.0;
             }
@@ -71,34 +135,29 @@ class PayrollCalculatorService
         return 0.0;
     }
 
-    public function getIsrBreakdown(float $monthlySalary): array
+    public function getIsrBreakdown(float $salary, string $periodicity = 'mensual'): array
     {
-        // ... (Tu código intacto de getIsrBreakdown) ...
-        if ($monthlySalary <= 0) {
+        $days = $this->getPeriodDays($periodicity);
+        $salarioMinimoPeriodo = $this->salarioMinimoDiario * $days;
+
+        if ($salary <= 0) {
             return [
-                'base' => 0,
-                'lower_limit' => 0,
-                'surplus' => 0,
-                'rate' => 0,
-                'marginal_tax' => 0,
-                'fixed_fee' => 0,
-                'calculated_isr' => 0,
-                'subsidy_applied' => 0,
-                'total_isr' => 0,
-                'is_minimum_wage' => false
+                'base' => 0, 'lower_limit' => 0, 'surplus' => 0, 'rate' => 0,
+                'marginal_tax' => 0, 'fixed_fee' => 0, 'calculated_isr' => 0,
+                'subsidy_applied' => 0, 'total_isr' => 0, 'is_minimum_wage' => false
             ];
         }
 
-        $isMinimumWage = $monthlySalary <= $this->salarioMinimoMensual;
+        $isMinimumWage = $salary <= $salarioMinimoPeriodo;
+        $table = $this->getIsrTable($periodicity);
 
-        foreach ($this->monthlyIsrTable as $row) {
-            if ($monthlySalary >= $row['lower'] && $monthlySalary <= $row['upper']) {
-                $surplus = $monthlySalary - $row['lower'];
+        foreach ($table as $row) {
+            if ($salary >= $row['lower'] && $salary <= $row['upper']) {
+                $surplus = $salary - $row['lower'];
                 $marginalTax = $surplus * $row['rate'];
 
                 $calculatedIsr = $row['fixed_fee'] + $marginalTax;
-                $subsidy = $this->calculateSubsidy($monthlySalary);
-
+                $subsidy = $this->calculateSubsidy($salary, $periodicity);
                 $finalIsr = $calculatedIsr - $subsidy;
 
                 if ($isMinimumWage) {
@@ -108,7 +167,7 @@ class PayrollCalculatorService
                 }
 
                 return [
-                    'base' => $monthlySalary,
+                    'base' => $salary,
                     'lower_limit' => $row['lower'],
                     'surplus' => $surplus,
                     'rate' => $row['rate'] * 100,
@@ -125,79 +184,72 @@ class PayrollCalculatorService
     }
 
     // ==========================================
-    // MÉTODOS IMSS (NUEVO)
+    // MÉTODOS IMSS
     // ==========================================
-
-    /**
-     * Calcula la Cuota Obrera del IMSS mensual.
-     */
-    public function calculateMonthlyIMSS(float $monthlySalary): float
+    public function calculateIMSS(float $salary, string $periodicity): float
     {
-        // 1. Obtener el Salario Diario y el SBC (Salario Base de Cotización)
-        $salarioDiario = $monthlySalary / 30.4; // Mes promedio fiscal
+        $days = $this->getPeriodDays($periodicity);
+        $salarioMinimoPeriodo = $this->salarioMinimoDiario * $days;
+        
+        $salarioDiario = $salary / $days; 
         $sbc = $salarioDiario * $this->factorIntegracionBasico;
 
-        // Tope legal del SBC: 25 UMAs (Art. 28 de la Ley del Seguro Social).
-        // El SBC nunca puede cotizar por arriba de este límite, sin importar qué tan alto sea el sueldo real.
         $topeSbcDiario = $this->umaDiaria * 25;
         if ($sbc > $topeSbcDiario) {
             $sbc = $topeSbcDiario;
         }
 
-        // Escudo IMSS: Si el empleado gana el salario mínimo, el patrón paga el IMSS obrero.
-        // Art. 36 de la Ley del Seguro Social.
-        if ($monthlySalary <= $this->salarioMinimoMensual) {
+        if ($salary <= $salarioMinimoPeriodo) {
             return 0.0;
         }
 
-        $diasCotizadosMes = 30.4; // Promedio mensual
+        $pctEspecie = 0.00375;  
+        $pctDinero = 0.0025;    
+        $pctInvalidez = 0.00625; 
+        $pctCesantia = 0.01125;  
 
-        // 2. Porcentajes de Ley (Cuota Obrera Fija)
-        $pctEspecie = 0.00375;  // Enf. y Mat. (Gastos Médicos Pensionados)
-        $pctDinero = 0.0025;    // Enf. y Mat. (Prestaciones en Dinero)
-        $pctInvalidez = 0.00625; // Invalidez y Vida
-        $pctCesantia = 0.01125;  // Cesantía en Edad Avanzada y Vejez
-
-        // Suma base (2.375%)
         $cuotaBaseDiaria = $sbc * ($pctEspecie + $pctDinero + $pctInvalidez + $pctCesantia);
 
-        // 3. Regla del Excedente (Más de 3 UMAs)
         $cuotaExcedenteDiaria = 0.0;
         $tresUmas = $this->umaDiaria * 3;
 
         if ($sbc > $tresUmas) {
-            $excedente = $sbc - $tresUmas;
-            $cuotaExcedenteDiaria = $excedente * 0.0040; // 0.40% sobre el excedente
+            $cuotaExcedenteDiaria = ($sbc - $tresUmas) * 0.0040; 
         }
 
-        // 4. Total mensual a retener
-        $retencionMensual = ($cuotaBaseDiaria + $cuotaExcedenteDiaria) * $diasCotizadosMes;
+        $retencionPeriodo = ($cuotaBaseDiaria + $cuotaExcedenteDiaria) * $days;
 
-        return round($retencionMensual, 2);
+        return round($retencionPeriodo, 2);
     }
 
     // ==========================================
-    // CÁLCULO FINAL DE NÓMINA
+    // CÁLCULO FINAL DE NÓMINA (MOTOR UNIFICADO)
     // ==========================================
     public function calculatePayroll(Employee $employee): array
     {
-        $monthlySalary = $employee->base_salary;
+        $periodicity = $employee->periodicity ?? 'mensual';
 
-        // 1. Retenciones de Ley Obligatorias
-        $isrRetention = $this->calculateMonthlyISR($monthlySalary);
-        $imssRetention = $this->calculateMonthlyIMSS($monthlySalary);
+        // 1. Calcular el Salario Bruto del Periodo Específico
+        $periodSalary = match ($periodicity) {
+            'quincenal' => $employee->base_salary / 2,
+            'semanal' => $employee->base_salary * 7 / 30.4,
+            default => $employee->base_salary,
+        };
+
+        // 2. Retenciones de Ley Obligatorias
+        $isrRetention = $this->calculateISR($periodSalary, $periodicity);
+        $imssRetention = $this->calculateIMSS($periodSalary, $periodicity);
 
         $customDeductionsList = [];
         $totalCustomDeductions = 0.0;
-
         $deductions = $employee->activeDeductions;
 
         // ---------------------------------------------------------
-        // FASE 1: Deducciones sobre el Salario Bruto (Ej. Sindicatos, Fondos base bruta)
+        // FASE 1: Deducciones sobre el Salario Bruto del Periodo
         // ---------------------------------------------------------
         $deduccionesBrutas = 0.0;
         foreach ($deductions->where('amount_type', 'percentage_gross') as $deduction) {
-            $amountToDeduct = $monthlySalary * ($deduction->amount / 100);
+            $amountToDeduct = $periodSalary * ($deduction->amount / 100);
 
             $deduccionesBrutas += $amountToDeduct;
             $totalCustomDeductions += $amountToDeduct;
@@ -210,31 +262,40 @@ class PayrollCalculatorService
         }
 
         // ---------------------------------------------------------
-        // FASE 2: Obtener Salario Neto Legal (Base para Pensiones u Órdenes Judiciales sobre Neto)
+        // FASE 2: Obtener Salario Neto Legal del Periodo (Pensión)
         // ---------------------------------------------------------
-        $alimonyBase = $monthlySalary - $isrRetention - $imssRetention;
+        $alimonyBase = $periodSalary - $isrRetention - $imssRetention;
 
         // ---------------------------------------------------------
-        // FASE 3: Deducciones sobre el Neto, Fijas y VSM
+        // FASE 3: Deducciones sobre el Neto, Fijas y VSM (Prorrateadas)
         // ---------------------------------------------------------
         foreach ($deductions->where('amount_type', '!=', 'percentage_gross') as $deduction) {
             $amountToDeduct = 0.0;
 
             switch ($deduction->amount_type) {
                 case 'fixed':
-                    // Monto fijo
-                    $amountToDeduct = $deduction->amount;
+                    // Prorrateo de monto fijo mensual al periodo
+                    $amountToDeduct = match ($periodicity) {
+                        'quincenal' => $deduction->amount / 2,
+                        'semanal' => $deduction->amount * 7 / 30.4,
+                        default => $deduction->amount,
+                    };
                     break;
 
                 case 'percentage_net':
-                    // Pensión Alimenticia (Calculada sobre la Base Legal de la SCJN)
+                    // Pensión Alimenticia
                     $amountToDeduct = $alimonyBase * ($deduction->amount / 100);
                     break;
 
                 case 'vsm':
-                    // Factor Infonavit
+                    // Prorrateo Factor Infonavit mensual al periodo
                     $umiMensual = $this->umiDiaria * 30.4;
-                    $amountToDeduct = ($deduction->amount * $umiMensual) + 15.00;
+                    $deduccionMensual = ($deduction->amount * $umiMensual) + 15.00;
+                    $amountToDeduct = match ($periodicity) {
+                        'quincenal' => $deduccionMensual / 2,
+                        'semanal' => $deduccionMensual * 7 / 30.4,
+                        default => $deduccionMensual,
+                    };
                     break;
             }
 
@@ -247,16 +308,17 @@ class PayrollCalculatorService
             ];
         }
 
-        // Salario Neto Final a depositar
-        $finalNetSalary = $monthlySalary - $isrRetention - $imssRetention - $totalCustomDeductions;
+        // Salario Neto Final del Periodo a depositar
+        $finalNetSalary = $periodSalary - $isrRetention - $imssRetention - $totalCustomDeductions;
 
         return [
-            'gross_salary' => round($monthlySalary, 2),
+            'gross_salary' => round($periodSalary, 2),
             'isr_retention' => $isrRetention,
             'imss_retention' => $imssRetention,
             'total_custom_deductions' => round($totalCustomDeductions, 2),
             'custom_deductions' => $customDeductionsList,
             'net_salary' => round($finalNetSalary, 2),
+            'period_type' => ucfirst($periodicity), // Útil para la vista
         ];
     }
 }

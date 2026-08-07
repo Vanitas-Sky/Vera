@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <title>Recibo_Nomina_{{ $detail->employee->rfc }}</title>
     <style>
-        /* ... (Tus estilos CSS se mantienen intactos) ... */
         @page {
             margin: 30px 40px;
         }
@@ -118,9 +117,40 @@
         .text-right {
             text-align: right;
         }
+        
+        .text-center {
+            text-align: center;
+        }
+
+        /* ESTILOS PARA LA CINTILLA Y EL NETO */
+        .summary-band {
+            width: 100%;
+            margin-top: 20px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            font-size: 10px;
+        }
+
+        .summary-band table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-band td {
+            text-align: center;
+            padding: 2px 5px;
+            font-weight: bold;
+            color: #475569;
+        }
+
+        .operator {
+            color: #94a3b8;
+            font-size: 12px;
+        }
 
         .net-box {
-            width: 40%;
+            width: 45%;
             float: right;
             margin-top: 15px;
             border: 2px solid #10b981;
@@ -141,6 +171,15 @@
             font-weight: bold;
             color: #0f172a;
             margin-top: 5px;
+        }
+
+        /* Estilo para el depósito parcial (quincenal/semanal) */
+        .partial-payment {
+            font-size: 10px;
+            color: #047857;
+            margin-top: 4px;
+            border-top: 1px solid #a7f3d0;
+            padding-top: 4px;
         }
 
         .crypto-table {
@@ -186,7 +225,6 @@
         <div class="title">Recibo de Nómina (CFDI 4.0)</div>
         <div class="uuid">Folio Fiscal (UUID): N0M1N4A0-C4E9-49B3-B0E2-{{ str_pad($detail->id, 12, '0', STR_PAD_LEFT) }}</div>
         <div class="uuid">Fecha y Hora de Emisión: {{ now()->format('d/m/Y H:i:s') }} | Tipo de Comprobante: N - Nómina</div>
-        <div class="uuid">Periodo Laborado: {{ $detail->period->period_name }} ({{ $detail->period->start_date->format('d/m/Y') }} al {{ $detail->period->end_date->format('d/m/Y') }})</div>
     </div>
 
     <!-- Datos de Patrón y Empleado -->
@@ -207,7 +245,7 @@
                 <div class="info-title">Datos del Empleado (Receptor)</div>
                 <div class="info-value">{{ $detail->employee->full_name }}</div>
 
-                <!-- Tabla anidada para dividir los datos del empleado a dos mini-columnas para ahorrar espacio -->
+                <!-- Tabla anidada para dividir los datos del empleado -->
                 <table style="width: 100%; border-collapse: collapse; margin-top: 3px;">
                     <tr>
                         <td style="width: 50%; vertical-align: top;">
@@ -215,11 +253,13 @@
                             <p class="info-text"><strong>CURP:</strong> {{ $detail->employee->curp }}</p>
                             <p class="info-text"><strong>NSS:</strong> {{ $detail->employee->nss }}</p>
                             <p class="info-text"><strong>Puesto:</strong> {{ $detail->employee->position ?? 'No especificado' }}</p>
+                            <p class="info-text"><strong>Ingreso:</strong> {{ $detail->employee->hire_date ? \Carbon\Carbon::parse($detail->employee->hire_date)->format('d/m/Y') : 'No capturada' }}</p>
+                            
                         </td>
                         <td style="width: 50%; vertical-align: top;">
                             <p class="info-text"><strong>C.P. Fiscal:</strong> {{ $detail->employee->cp ?? '29950' }}</p>
-                            <p class="info-text"><strong>Uso CFDI:</strong> CN01 - Nómina</p>
-                            <p class="info-text"><strong>Ingreso:</strong> {{ $detail->employee->hire_date ? \Carbon\Carbon::parse($detail->employee->hire_date)->format('d/m/Y') : 'No capturada' }}</p>
+                            <p class="info-text"><strong>Régimen:</strong> {{ $detail->employee->work_regime ?? '02 - Sueldos y Salarios' }}</p>
+                            <p class="info-text"><strong>Periodicidad:</strong> {{ ucfirst($detail->employee->periodicity ?? 'mensual') }}</p>
                             <p class="info-text"><strong>CLABE:</strong> {{ $detail->employee->clabe ?? 'No capturada' }}</p>
                         </td>
                     </tr>
@@ -228,13 +268,14 @@
         </tr>
     </table>
 
-    <!-- Reglas de Cobro (Específicas de Nómina) -->
+    <!-- Reglas de Cobro y Periodo Laborado -->
     <div class="payment-info">
         <table>
             <tr>
-                <td width="25%"><strong>Moneda:</strong> MXN</td>
-                <td width="35%"><strong>Forma de Pago:</strong> 99 - Por definir</td>
-                <td width="40%"><strong>Método de Pago:</strong> PUE - Pago en una sola exhibición</td>
+                <td width="20%"><strong>Moneda:</strong> MXN</td>
+                <td width="25%"><strong>Forma de Pago:</strong> 99</td>
+                <td width="25%"><strong>Método de Pago:</strong> PUE</td>
+                <td width="30%"><strong>Periodo:</strong> {{ \Carbon\Carbon::parse($detail->period->start_date)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($detail->period->end_date)->format('d/m/Y') }}</td>
             </tr>
         </table>
     </div>
@@ -252,7 +293,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Sueldo Base (Mensual)</td>
+                            <td>Sueldo Base (Consolidado Mensual)</td>
                             <td class="text-right">${{ number_format($detail->gross_salary, 2) }}</td>
                         </tr>
                     </tbody>
@@ -263,6 +304,7 @@
                     <thead>
                         <tr>
                             <th>DEDUCCIONES</th>
+                            <!-- Cambio solicitado: Mostrar importe en positivo (sin el menos rojo) -->
                             <th class="text-right">IMPORTE</th>
                         </tr>
                     </thead>
@@ -271,7 +313,7 @@
                         @if($detail->isr_retention > 0)
                         <tr>
                             <td>002 - Retención ISR (Art. 96)</td>
-                            <td class="text-right text-red-600">-${{ number_format($detail->isr_retention, 2) }}</td>
+                            <td class="text-right">${{ number_format($detail->isr_retention, 2) }}</td>
                         </tr>
                         @endif
 
@@ -279,18 +321,18 @@
                         @if($detail->imss_employee > 0)
                         <tr>
                             <td>001 - Retención IMSS (Cuota Obrera)</td>
-                            <td class="text-right text-red-600">-${{ number_format($detail->imss_employee, 2) }}</td>
+                            <td class="text-right">${{ number_format($detail->imss_employee, 2) }}</td>
                         </tr>
                         @endif
 
                         <!-- ========================================== -->
-                        <!-- NUEVO: DEDUCCIONES PERSONALIZADAS          -->
+                        <!-- DEDUCCIONES PERSONALIZADAS                 -->
                         <!-- ========================================== -->
                         @if($detail->total_custom_deductions > 0 && !empty($detail->custom_deductions_breakdown))
                             @foreach($detail->custom_deductions_breakdown as $custom)
                             <tr>
                                 <td>{{ str_pad($custom['sat_key'], 3, '0', STR_PAD_LEFT) }} - {{ $custom['description'] }}</td>
-                                <td class="text-right text-red-600">-${{ number_format($custom['amount'], 2) }}</td>
+                                <td class="text-right">${{ number_format($custom['amount'], 2) }}</td>
                             </tr>
                             @endforeach
                         @endif
@@ -298,7 +340,7 @@
                         <!-- Caso Salario Mínimo Totalmente Exento -->
                         @if($detail->isr_retention == 0 && $detail->imss_employee == 0 && $detail->total_custom_deductions == 0)
                         <tr>
-                            <td><span style="color: #10b981;">Subsidio / Apoyo Salario Mínimo (Exento LISR y LSS)</span></td>
+                            <td><span style="color: #10b981;">Subsidio / Apoyo Salario Mínimo (Exento)</span></td>
                             <td class="text-right">$0.00</td>
                         </tr>
                         @endif
@@ -308,9 +350,35 @@
         </tr>
     </table>
 
+    <!-- NUEVO: CINTILLA DE OPERACIÓN MATEMÁTICA -->
+    <div class="summary-band">
+        <table>
+            <tr>
+                <td>Percepciones<br><span style="color: #0f172a;">${{ number_format($detail->gross_salary, 2) }}</span></td>
+                <td class="operator">-</td>
+                <td>ISR<br><span style="color: #0f172a;">${{ number_format($detail->isr_retention, 2) }}</span></td>
+                <td class="operator">-</td>
+                <td>IMSS<br><span style="color: #0f172a;">${{ number_format($detail->imss_employee, 2) }}</span></td>
+                <td class="operator">-</td>
+                <td>Otras Deducciones<br><span style="color: #0f172a;">${{ number_format($detail->total_custom_deductions, 2) }}</span></td>
+                <td class="operator">=</td>
+                <td>Neto a Pagar<br><span style="color: #10b981;">${{ number_format($detail->net_salary, 2) }}</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- CAJA DE NETO A PAGAR -->
     <div class="net-box">
-        <div class="net-title">Neto a Pagar</div>
+        <div class="net-title">Total Consolidado Mensual</div>
         <div class="net-amount">${{ number_format($detail->net_salary, 2) }} MXN</div>
+        
+        <!-- NUEVO: Desglose si es Semanal o Quincenal -->
+        @if(isset($factor) && $factor > 1)
+        <div class="partial-payment">
+            Equivale a {{ $periodicity == 'quincenal' ? '2 quincenas' : round($factor, 2) . ' semanas' }} de:<br>
+            <strong>${{ number_format($detail->net_salary / $factor, 2) }}</strong> c/u
+        </div>
+        @endif
     </div>
     <div style="clear: both;"></div>
 
