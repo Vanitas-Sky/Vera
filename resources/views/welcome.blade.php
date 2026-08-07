@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Vera | Inteligencia financiera y claridad fiscal</title>
 
+    <!-- Favicon del Diamante de Vera -->
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+
     <!-- Tailwind CSS (A través de Vite) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
