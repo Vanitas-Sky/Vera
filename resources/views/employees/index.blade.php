@@ -27,14 +27,14 @@
             <!-- Filtros y Buscador -->
             <form method="GET" action="{{ route('employees.index') }}" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                 <div class="sm:col-span-2">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar (Nombre, RFC, CURP, NSS, Puesto, Correo)</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar (Nombre, RFC, CURP, NSS, Puesto, Correo, Teléfono)</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                         </span>
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Escribe para buscar por nombre, puesto, correo..."
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Escribe para buscar por nombre, teléfono, puesto, correo..."
                             class="w-full pl-9 border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm transition">
                     </div>
                 </div>
@@ -65,11 +65,30 @@
                         <tbody class="bg-white divide-y divide-slate-200">
                             @forelse ($employees as $employee)
                             <tr class="hover:bg-slate-50/80 transition">
-                                <!-- Empleado / Puesto -->
+                                <!-- Empleado / Puesto / Contacto -->
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-bold text-slate-900">{{ $employee->full_name }}</div>
-                                    <div class="text-xs text-slate-500">{{ $employee->position ?? 'Sin puesto asignado' }}</div>
-                                    <div class="text-[11px] text-slate-400 font-mono">{{ $employee->email }}</div>
+                                    <div class="text-xs text-slate-500 mb-1">{{ $employee->position ?? 'Sin puesto asignado' }}</div>
+                                    
+                                    <div class="flex flex-col gap-0.5">
+                                        @if($employee->email)
+                                        <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                                            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                            </svg>
+                                            {{ $employee->email }}
+                                        </div>
+                                        @endif
+
+                                        @if($employee->phone)
+                                        <div class="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                                            <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                            </svg>
+                                            <a href="tel:{{ $employee->phone }}" class="hover:text-emerald-600 transition">{{ $employee->phone }}</a>
+                                        </div>
+                                        @endif
+                                    </div>
                                 </td>
 
                                 <!-- Identificadores -->
@@ -81,6 +100,7 @@
                                 <!-- Salario Bruto -->
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-slate-800">
                                     ${{ number_format($employee->base_salary, 2) }}
+                                    <div class="text-[10px] text-slate-400 font-normal uppercase tracking-wider">{{ $employee->periodicity }}</div>
                                 </td>
 
                                 <!-- Estado -->
@@ -92,11 +112,11 @@
                                     @endif
                                 </td>
 
-                                <!-- Acciones (Alineadas y Proporcionales) -->
+                                <!-- Acciones -->
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end gap-2">
                                         
-                                        <!-- Botón Deducciones (Compacto) -->
+                                        <!-- Botón Deducciones -->
                                         <a href="{{ route('employees.deductions.index', $employee->id) }}" 
                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200/60 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm"
                                            title="Gestionar créditos, Infonavit o deducciones fijas">
@@ -112,7 +132,7 @@
                                             Editar
                                         </a>
 
-                                        <!-- Botón Dar de Baja / Eliminar -->
+                                        <!-- Botón Dar de Baja -->
                                         @if($employee->is_active)
                                         <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" class="inline-block form-confirm"
                                             data-title="¿Dar de baja al empleado?"

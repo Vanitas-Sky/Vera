@@ -58,7 +58,7 @@
                         <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b pb-2">Datos Laborales y Contractuales</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             
-                            <!-- NUEVO: Régimen SAT -->
+                            <!-- Régimen SAT -->
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">Régimen de Contratación (SAT)</label>
                                 <select name="work_regime" required class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
@@ -70,7 +70,7 @@
                                 @error('work_regime') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
                             </div>
 
-                            <!-- NUEVO: Periodicidad de Pago -->
+                            <!-- Periodicidad de Pago -->
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">Periodicidad de Pago</label>
                                 <select name="periodicity" required class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
@@ -100,6 +100,13 @@
                             </div>
 
                             <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">NSS</label>
+                                <input type="text" name="nss" value="{{ old('nss', $employee->nss) }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. 12345678903" required>
+                                <p class="text-[11px] text-slate-400 mt-1">Número de Seguridad Social (11 dígitos exactos).</p>
+                                @error('nss') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">Fecha de Ingreso</label>
                                 <input type="date" name="hire_date" value="{{ old('hire_date', $employee->hire_date ? \Carbon\Carbon::parse($employee->hire_date)->format('Y-m-d') : '') }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
                                 @error('hire_date') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
@@ -111,16 +118,18 @@
                                 @error('email') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
                             </div>
 
+                            <!-- Teléfono Móvil -->
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">Teléfono Móvil (10 dígitos)</label>
+                                <input type="tel" name="phone" value="{{ old('phone', $employee->phone) }}" maxlength="10" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. 9611234567">
+                                <p class="text-[11px] text-slate-400 mt-1">Número a 10 dígitos sin espacios ni guiones para contacto directo.</p>
+                                @error('phone') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">CLABE Interbancaria</label>
                                 <input type="text" name="clabe" value="{{ old('clabe', $employee->clabe) }}" maxlength="18" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. 012180001234567890">
                                 @error('clabe') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-1">NSS</label>
-                                <input type="text" name="nss" value="{{ old('nss', $employee->nss) }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. 12345678903" required>
-                                @error('nss') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
                             </div>
 
                             <div>

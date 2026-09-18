@@ -18,6 +18,21 @@ class EmployeeApiController extends Controller
         }
 
         $employees = Employee::where('company_id', $company->id)
+            ->select([
+                'id',
+                'full_name',
+                'position',
+                'email',
+                'phone',
+                'rfc',
+                'curp',
+                'nss',
+                'clabe',
+                'base_salary',
+                'periodicity',
+                'work_regime',
+                'is_active'
+            ])
             ->orderBy('full_name', 'asc')
             ->get();
 

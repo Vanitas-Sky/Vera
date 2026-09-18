@@ -23,13 +23,23 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->firstOrFail();
-        
+
         // Genera el token con Laravel Sanctum
         $token = $user->createToken('vera-mobile-token')->plainTextToken;
 
         return response()->json([
             'token' => $token,
             'message' => 'Autenticación exitosa'
+        ]);
+    }
+
+    public function logout(Request $request)
+    {
+        // Elimina el token actual que se usó para autenticar la petición móvil
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Sesión cerrada correctamente'
         ]);
     }
 }
