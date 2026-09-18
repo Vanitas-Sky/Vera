@@ -4,7 +4,70 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserCompanyController;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Api\V1\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\DashboardApiController;
+use App\Http\Controllers\Api\V1\PayrollApiController;
+use App\Http\Controllers\Api\V1\EmployeeApiController;
+use App\Http\Controllers\Api\V1\FixedExpenseApiController;
+use App\Http\Controllers\Api\V1\InvoiceApiController;
+use App\Http\Controllers\Api\V1\AiConsultantApiController;
+use App\Http\Controllers\Api\V1\CompanyApiController;
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ... rutas anteriores ...
+    Route::get('/employees', [EmployeeApiController::class, 'index']);
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    // ... dashboard, payrolls, employees ...
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ... tus otras rutas ...
+    Route::post('/ai/ask', [AiConsultantApiController::class, 'ask']);
+    Route::get('/ai/summary', [AiConsultantApiController::class, 'dashboardSummary']);
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ... rutas previas ...
+    Route::get('/invoices', [InvoiceApiController::class, 'index']);
+    Route::get('/invoices/{id}', [InvoiceApiController::class, 'show']);
+    Route::get('/company/profile', [CompanyApiController::class, 'profile']);
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ... rutas previas ...
+    Route::get('/payrolls/{id}/details', [PayrollApiController::class, 'show']);
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ... rutas previas ...
+    Route::get('/payrolls/{periodId}/employees/{employeeId}/pdf', [PayrollApiController::class, 'downloadReceiptPdf']);
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ... rutas anteriores (login, logout, dashboard, payrolls, employees) ...
+    Route::get('/fixed-expenses', [FixedExpenseApiController::class, 'index']);
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // ... rutas anteriores ...
+    Route::get('/payrolls', [PayrollApiController::class, 'index']);
+});
+
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']); // Esta ya la tenías
+
+    // Nueva ruta para el resumen del dashboard
+    experimental:
+    Route::get('/dashboard/summary', [DashboardApiController::class, 'summary']);
+});
+
+Route::prefix('v1')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 /*
 |--------------------------------------------------------------------------

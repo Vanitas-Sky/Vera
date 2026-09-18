@@ -11,21 +11,9 @@
     <!-- Animación CSS para errores (Shake Effect) -->
     <style>
         @keyframes shake {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            20%,
-            60% {
-                transform: translateX(-4px);
-            }
-
-            40%,
-            80% {
-                transform: translateX(4px);
-            }
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
         }
 
         .animate-shake {
@@ -70,31 +58,31 @@
                         <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b pb-2">Datos Laborales y Contractuales</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                            <!-- NUEVO: Régimen SAT -->
+                            <!-- Régimen SAT -->
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">Régimen de Contratación (SAT)</label>
                                 <select name="work_regime" required class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
-                                    <option value="02 - Sueldos y Salarios" @selected(old('work_regime')=='02 - Sueldos y Salarios' )>02 - Sueldos y Salarios</option>
-                                    <option value="09 - Asimilados a Salarios" @selected(old('work_regime')=='09 - Asimilados a Salarios' )>09 - Asimilados a Salarios</option>
-                                    <option value="13 - Indemnización" @selected(old('work_regime')=='13 - Indemnización' )>13 - Indemnización o Separación</option>
+                                    <option value="02 - Sueldos y Salarios" @selected(old('work_regime')=='02 - Sueldos y Salarios')>02 - Sueldos y Salarios</option>
+                                    <option value="09 - Asimilados a Salarios" @selected(old('work_regime')=='09 - Asimilados a Salarios')>09 - Asimilados a Salarios</option>
+                                    <option value="13 - Indemnización" @selected(old('work_regime')=='13 - Indemnización')>13 - Indemnización o Separación</option>
                                 </select>
                                 <p class="text-[11px] text-slate-400 mt-1">Obligatorio para el timbrado del recibo CFDI.</p>
                                 @error('work_regime') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
                             </div>
 
-                            <!-- NUEVO: Periodicidad de Pago -->
+                            <!-- Periodicidad de Pago -->
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">Periodicidad de Pago</label>
                                 <select name="periodicity" required class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
-                                    <option value="mensual" @selected(old('periodicity')=='mensual' )>Mensual (1 pago al mes)</option>
-                                    <option value="quincenal" @selected(old('periodicity')=='quincenal' )>Quincenal (2 pagos al mes)</option>
-                                    <option value="semanal" @selected(old('periodicity')=='semanal' )>Semanal (4 pagos al mes)</option>
+                                    <option value="mensual" @selected(old('periodicity')=='mensual')>Mensual (1 pago al mes)</option>
+                                    <option value="quincenal" @selected(old('periodicity')=='quincenal')>Quincenal (2 pagos al mes)</option>
+                                    <option value="semanal" @selected(old('periodicity')=='semanal')>Semanal (4 pagos al mes)</option>
                                 </select>
                                 <p class="text-[11px] text-slate-400 mt-1">Determina qué tarifa de ISR aplica automáticamente el motor.</p>
                                 @error('periodicity') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
                             </div>
 
-                            <!-- Salario y Puesto (Movidos para mejor fluidez visual) -->
+                            <!-- Salario y Puesto -->
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-1">Salario Base Mensual</label>
                                 <div class="relative">
@@ -128,6 +116,14 @@
                                 <label class="block text-sm font-bold text-slate-700 mb-1">Correo Electrónico</label>
                                 <input type="email" name="email" value="{{ old('email') }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. empleado@email.com">
                                 @error('email') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
+                            </div>
+
+                            <!-- Teléfono Móvil -->
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-1">Teléfono Móvil (10 dígitos)</label>
+                                <input type="tel" name="phone" value="{{ old('phone') }}" maxlength="10" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" placeholder="Ej. 9611234567">
+                                <p class="text-[11px] text-slate-400 mt-1">Número a 10 dígitos sin espacios ni guiones para contacto directo.</p>
+                                @error('phone') <span class="text-xs font-bold text-red-500 block mt-1 animate-shake">⚠️ {{ $message }}</span> @enderror
                             </div>
 
                             <div>

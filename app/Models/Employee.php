@@ -15,6 +15,7 @@ class Employee extends Model
         'curp',
         'full_name',
         'email',
+        'phone',
         'position',
         'cp',
         'nss',

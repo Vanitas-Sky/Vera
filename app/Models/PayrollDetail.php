@@ -26,6 +26,7 @@ class PayrollDetail extends Model
         'gross_salary' => 'decimal:2',
         'isr_retention' => 'decimal:2',
         'imss_employee' => 'decimal:2',
+        'total_custom_deductions' => 'decimal:2', // <-- Agregar aquí
         'net_salary' => 'decimal:2',
         'custom_deductions_breakdown' => 'array'
     ];
