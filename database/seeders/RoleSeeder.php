@@ -18,6 +18,7 @@ class RoleSeeder extends Seeder
             ['name' => Role::ADMIN_PYME, 'description' => 'Administrador de la empresa (PyME) registrada.'],
             ['name' => Role::ACCOUNTANT, 'description' => 'Contador; puede modificar la Matriz de Indispensabilidad y calcular nominas.'],
             ['name' => Role::OPERATOR, 'description' => 'Capturista con acceso limitado a carga de informacion.'],
+            ['name' => Role::AUDITOR_EXTERNO, 'description' => 'Auditor externo con permisos de solo lectura y acceso total a Vera AI.'],
         ];
 
         foreach ($roles as $role) {

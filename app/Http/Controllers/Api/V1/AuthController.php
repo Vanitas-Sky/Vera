@@ -1,45 +1,139 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\Http\Controllers\Api\V1; // <-- ESTO DEBE SER ASÍ (CON \V1)
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class AuthController extends Controller
 {
+    /**
+     * Inicio de sesión móvil con emisión de token Sanctum y detección de rol.
+     */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+        $request->validate([
+            'email'       => 'required|email',
+            'password'    => 'required|string',
+            'device_name' => 'nullable|string',
         ]);
 
-        if (!Auth::attempt($credentials)) {
+        $user = User::with('role')->where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
-                'message' => 'Credenciales incorrectas'
+                'message' => 'Las credenciales proporcionadas son incorrectas.'
             ], 401);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        if (!$user->is_active) {
+            return response()->json([
+                'message' => 'Tu cuenta se encuentra inactiva. Contacta al administrador.'
+            ], 403);
+        }
 
-        // Genera el token con Laravel Sanctum
-        $token = $user->createToken('vera-mobile-token')->plainTextToken;
+        // Crear token de Sanctum identificado para Android
+        $deviceName = $request->device_name ?? 'android_device';
+        $token = $user->createToken($deviceName)->plainTextToken;
 
         return response()->json([
             'token' => $token,
-            'message' => 'Autenticación exitosa'
-        ]);
+            'user'  => [
+                'id'         => $user->id,
+                'name'       => $user->name,
+                'email'      => $user->email,
+                'role'       => $user->role?->name,
+                'is_auditor' => $user->isAuditor(),
+            ],
+            'message' => 'Inicio de sesión exitoso.'
+        ], 200);
     }
 
+    /**
+     * Cierra la sesión revocando el token del dispositivo.
+     */
     public function logout(Request $request)
     {
-        // Elimina el token actual que se usó para autenticar la petición móvil
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Sesión cerrada correctamente'
+            'message' => 'Sesión cerrada exitosamente.'
+        ], 200);
+    }
+
+    /**
+     * Paso 1 Móvil: Envía el token al correo y valida que la cuenta exista.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ], [
+            'email.required' => 'Ingresa tu correo electrónico.',
+            'email.email'    => 'Formato de correo no válido.'
         ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No existe ninguna cuenta asociada a este correo electrónico.'
+            ], 404);
+        }
+
+        // Genera el token de Laravel y dispara la notificación por correo
+        $token = Password::broker()->createToken($user);
+        $user->sendPasswordResetNotification($token);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Código de recuperación enviado a tu correo.'
+        ], 200);
+    }
+
+    /**
+     * Paso 2 Móvil: Recibe el token, correo y nueva contraseña.
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email'                 => 'required|email',
+            'token'                 => 'required|string',
+            'password'              => ['required', 'string', 'confirmed', PasswordRule::min(6)],
+            'password_confirmation' => 'required|string',
+        ], [
+            'token.required'     => 'Debes ingresar el código recibido.',
+            'password.min'       => 'La contraseña debe tener mínimo 6 caracteres.',
+            'password.confirmed' => 'Las contraseñas no coinciden.'
+        ]);
+
+        $status = Password::broker()->reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->save();
+
+                // Revoca tokens Sanctum anteriores por seguridad
+                $user->tokens()->delete();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión.'
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'El código o token de recuperación es inválido o ha expirado.'
+        ], 400);
     }
 }

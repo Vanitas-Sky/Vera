@@ -6,7 +6,6 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <!-- Logo en blanco para contrastar con el fondo oscuro -->
                         <x-application-logo class="block h-9 w-auto fill-current text-white" />
                     </a>
                 </div>
@@ -29,7 +28,7 @@
                         {{ __('Nóminas') }}
                     </x-nav-link>
 
-                    <x-nav-link :href="route('opex.index')" :active="request()->routeIs('expenses.*')">
+                    <x-nav-link :href="route('opex.index')" :active="request()->routeIs('opex.*')">
                         {{ __('Rentas y servicios') }}
                     </x-nav-link>
 
@@ -37,9 +36,12 @@
                         {{ __('Facturas') }}
                     </x-nav-link>
 
+                    {{-- Crear Factura: EXCLUSIVO para Administrador / Contador --}}
+                    @if(!Auth::user()->isAuditor())
                     <x-nav-link :href="route('billing.create')" :active="request()->routeIs('billing.create')">
                         {{ __('Crear Factura') }}
                     </x-nav-link>
+                    @endif
 
                     <x-nav-link :href="route('conciliations.index')" :active="request()->routeIs('conciliations.*')">
                         {{ __('Conciliación Bancaria') }}
@@ -51,20 +53,25 @@
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
-                        <!-- Botón sin fondo blanco, texto claro -->
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-slate-300 bg-vera-dark hover:text-white focus:outline-none transition ease-in-out duration-150">
-                            
-                            <!-- AQUI VA EL AVATAR Y NOMBRE (ESCRITORIO) -->
+
+                            <!-- AVATAR, NOMBRE Y BADGE DE AUDITOR -->
                             <div class="flex items-center gap-2">
                                 @if(Auth::user()->profile_photo_path)
-                                    <img class="h-8 w-8 rounded-full object-cover border border-slate-600 shadow-sm" src="{{ Storage::url(Auth::user()->profile_photo_path) }}" alt="{{ Auth::user()->name }}" />
+                                <img class="h-8 w-8 rounded-full object-cover border border-slate-600 shadow-sm" src="{{ Storage::url(Auth::user()->profile_photo_path) }}" alt="{{ Auth::user()->name }}" />
                                 @else
-                                    <!-- Fallback Verde Menta si no hay foto -->
-                                    <div class="h-8 w-8 rounded-full bg-vera-accent flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                                        {{ substr(Auth::user()->name, 0, 1) }}
-                                    </div>
+                                <div class="h-8 w-8 rounded-full {{ Auth::user()->isAuditor() ? 'bg-amber-600' : 'bg-vera-accent' }} flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                                    {{ substr(Auth::user()->name, 0, 1) }}
+                                </div>
                                 @endif
+
                                 <div class="font-semibold text-white">{{ Auth::user()->name }}</div>
+
+                                @if(Auth::user()->isAuditor())
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full tracking-wider">
+                                    AUDITOR
+                                </span>
+                                @endif
                             </div>
 
                             <div class="ms-1 text-slate-400">
@@ -80,11 +87,18 @@
                             {{ __('Mi Perfil') }}
                         </x-dropdown-link>
 
+                        {{-- Opción disponible solo para el Administrador / Dueño --}}
+                        @if(!Auth::user()->isAuditor())
+                        <x-dropdown-link :href="route('auditors.index')">
+                            {{ __('Auditores Externos') }}
+                        </x-dropdown-link>
+                        @endif
+
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
+                                onclick="event.preventDefault();
                                                 this.closest('form').submit();">
                                 {{ __('Cerrar Sesión') }}
                             </x-dropdown-link>
@@ -109,8 +123,35 @@
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-vera-dark">
         <div class="pt-2 pb-3 space-y-1 border-t border-slate-700">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
+                {{ __('Inicio') }}
             </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('company.profile')" :active="request()->routeIs('company.profile')">
+                {{ __('Perfil Fiscal') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('employees.index')" :active="request()->routeIs('employees.*')">
+                {{ __('Empleados') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('payrolls.index')" :active="request()->routeIs('payrolls.*')">
+                {{ __('Nóminas') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('opex.index')" :active="request()->routeIs('opex.*')">
+                {{ __('Rentas y servicios') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')">
+                {{ __('Facturas') }}
+            </x-responsive-nav-link>
+
+            @if(!Auth::user()->isAuditor())
+            <x-responsive-nav-link :href="route('billing.create')" :active="request()->routeIs('billing.create')">
+                {{ __('Crear Factura') }}
+            </x-responsive-nav-link>
+            @endif
+
             <x-responsive-nav-link :href="route('conciliations.index')" :active="request()->routeIs('conciliations.*')">
                 {{ __('Conciliación Bancaria') }}
             </x-responsive-nav-link>
@@ -118,18 +159,23 @@
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-slate-700">
-            
-            <!-- AQUI VA EL AVATAR Y NOMBRE (MÓVIL) -->
             <div class="px-4 flex items-center gap-3">
                 @if(Auth::user()->profile_photo_path)
-                    <img class="h-10 w-10 rounded-full object-cover border border-slate-600" src="{{ Storage::url(Auth::user()->profile_photo_path) }}" alt="{{ Auth::user()->name }}" />
+                <img class="h-10 w-10 rounded-full object-cover border border-slate-600" src="{{ Storage::url(Auth::user()->profile_photo_path) }}" alt="{{ Auth::user()->name }}" />
                 @else
-                    <div class="h-10 w-10 rounded-full bg-vera-accent flex items-center justify-center text-white text-lg font-bold shadow-sm">
-                        {{ substr(Auth::user()->name, 0, 1) }}
-                    </div>
+                <div class="h-10 w-10 rounded-full {{ Auth::user()->isAuditor() ? 'bg-amber-600' : 'bg-vera-accent' }} flex items-center justify-center text-white text-lg font-bold shadow-sm">
+                    {{ substr(Auth::user()->name, 0, 1) }}
+                </div>
                 @endif
                 <div>
-                    <div class="font-semibold text-base text-white">{{ Auth::user()->name }}</div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-semibold text-base text-white">{{ Auth::user()->name }}</span>
+                        @if(Auth::user()->isAuditor())
+                        <span class="px-2 py-0.5 text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
+                            AUDITOR
+                        </span>
+                        @endif
+                    </div>
                     <div class="font-medium text-sm text-slate-400">{{ Auth::user()->email }}</div>
                 </div>
             </div>
@@ -139,11 +185,16 @@
                     {{ __('Mi Perfil') }}
                 </x-responsive-nav-link>
 
-                <!-- Authentication -->
+                @if(!Auth::user()->isAuditor())
+                <x-responsive-nav-link :href="route('auditors.index')">
+                    {{ __('Auditores Externos') }}
+                </x-responsive-nav-link>
+                @endif
+
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
+                        onclick="event.preventDefault();
                                         this.closest('form').submit();">
                         {{ __('Cerrar Sesión') }}
                     </x-responsive-nav-link>
