@@ -14,6 +14,24 @@
             </div>
             @endif
 
+            @if (session('error'))
+            <div class="mb-4 bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-lg text-sm font-medium">
+                {{ session('error') }}
+            </div>
+            @endif
+
+            {{-- Banner Informativo para el Auditor Externo --}}
+            @if(Auth::user()->isAuditor())
+            <div class="mb-6 bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-xs">
+                    <span class="font-bold">Modo Auditoría:</span> Estás consultando la configuración fiscal y régimen tributario de la empresa. La modificación de estos parámetros está reservada exclusivamente para el Administrador PyME.
+                </div>
+            </div>
+            @endif
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-8">
                 <div class="mb-6 border-b border-slate-100 pb-4">
                     <h3 class="text-lg font-bold text-vera-dark">Configuración SAT</h3>
@@ -24,31 +42,45 @@
                     @csrf
                     @method('PUT')
 
+                    @php
+                        $isAuditor = Auth::user()->isAuditor();
+                        $inputClasses = $isAuditor 
+                            ? 'w-full rounded-md border-slate-200 bg-slate-100 text-slate-500 shadow-sm cursor-not-allowed' 
+                            : 'w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring-vera-green';
+                    @endphp
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- RFC -->
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-1">RFC</label>
-                            <input type="text" name="rfc" value="{{ old('rfc', $company->rfc) }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring-vera-green uppercase font-mono" maxlength="13" required>
+                            <input type="text" name="rfc" value="{{ old('rfc', $company->rfc) }}" 
+                                class="{{ $inputClasses }} uppercase font-mono" maxlength="13" 
+                                @if($isAuditor) disabled @else required @endif>
                             @error('rfc') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
                         <!-- Código Postal -->
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-1">Código Postal Fiscal</label>
-                            <input type="text" name="postal_code" value="{{ old('postal_code', $company->postal_code) }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring-vera-green" maxlength="5" required>
+                            <input type="text" name="postal_code" value="{{ old('postal_code', $company->postal_code) }}" 
+                                class="{{ $inputClasses }}" maxlength="5" 
+                                @if($isAuditor) disabled @else required @endif>
                             @error('postal_code') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                         </div>
 
                         <!-- Razón Social -->
                         <div class="md:col-span-2">
                             <label class="block text-sm font-bold text-slate-700 mb-1">Razón Social (Sin SA de CV)</label>
-                            <input type="text" name="legal_name" value="{{ old('legal_name', $company->legal_name) }}" class="w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring-vera-green uppercase" required>
+                            <input type="text" name="legal_name" value="{{ old('legal_name', $company->legal_name) }}" 
+                                class="{{ $inputClasses }} uppercase" 
+                                @if($isAuditor) disabled @else required @endif>
                         </div>
 
                         <!-- Régimen Fiscal -->
                         <div class="md:col-span-2">
                             <label class="block text-sm font-bold text-slate-700 mb-1">Régimen Fiscal (SAT)</label>
-                            <select name="tax_regime_code" class="w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring-vera-green bg-slate-50">
+                            <select name="tax_regime_code" class="{{ $inputClasses }} {{ $isAuditor ? '' : 'bg-slate-50' }}" 
+                                @if($isAuditor) disabled @endif>
                                 <option value="">Selecciona tu régimen oficial...</option>
                                 @foreach($regimenesSAT as $codigo => $descripcion)
                                 <option value="{{ $codigo }}" {{ old('tax_regime_code', $company->tax_regime_code) == $codigo ? 'selected' : '' }}>
@@ -62,7 +94,8 @@
                         <!-- Giro Específico / Actividad Económica -->
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-1">Giro o Actividad Económica principal</label>
-                            <select name="industry" class="w-full rounded-md border-slate-300 shadow-sm focus:border-vera-green focus:ring focus:ring-emerald-200 text-sm">
+                            <select name="industry" class="{{ $inputClasses }} text-sm" 
+                                @if($isAuditor) disabled @endif>
                                 <option value="">Selecciona un giro (Opcional)...</option>
                                 <option value="Construcción e Inmobiliaria" @selected(old('industry', $company->industry ?? '') == 'Construcción e Inmobiliaria')>Construcción e Inmobiliaria</option>
                                 <option value="Hotelería y Turismo" @selected(old('industry', $company->industry ?? '') == 'Hotelería y Turismo')>Hotelería y Turismo</option>
@@ -80,11 +113,14 @@
                         </div>
                     </div>
 
+                    {{-- Botón de Guardado: Solo para Administradores / Contadores --}}
+                    @if(!$isAuditor)
                     <div class="mt-8 flex justify-end pt-4 border-t border-slate-100">
                         <button type="submit" class="bg-vera-green text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition font-bold shadow-sm">
                             Guardar Configuración Fiscal
                         </button>
                     </div>
+                    @endif
                 </form>
             </div>
         </div>

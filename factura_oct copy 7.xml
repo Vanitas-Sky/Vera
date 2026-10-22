@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd" Version="4.0" Serie="TAB" Folio="1190" Fecha="2026-10-28T18:40:00" CondicionesDePago="Transferencia" SubTotal="4200.00" Moneda="MXN" Total="4872.00" TipoDeComprobante="I" Exportacion="01" MetodoPago="PUE" FormaPago="03" LugarExpedicion="06700" NoCertificado="30001000000500003416" Certificado="MIIFsDCCA5igAwIBAgIUMzAwMDEwMDAwMDA1MDAwMDM0MTYwDQYJKoZIhvcNAQELBQAwggErMQ8wDQYDVQQDDAZBQyBVQVQxLjAsBgNVBAoMJVNFUlZJQ0lPIERFIEFETUlOSVNUUkFDSU9OIFRSSUJVVEFSSUExGjAYBgNVBAsMEVNBVC1JRVMgQXV0aG9yaXR5" Sello="MOCK_SELLO_CFDI_ROJO_02">
+    <cfdi:Emisor Rfc="CTG061019MU8" Nombre="COMERCIALIZADORA DE TABACO Y DERIVADOS" RegimenFiscal="601"/>
+    <cfdi:Receptor Rfc="BIM011108DJ5" Nombre="BIMBO" DomicilioFiscalReceptor="29200" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+    <cfdi:Conceptos>
+        <cfdi:Concepto ClaveProdServ="50211500" Cantidad="50" ClaveUnidad="XPK" Unidad="Paquete" Descripcion="Cajetillas de Cigarros Rubios de 20 Piezas con Filtro" ValorUnitario="84.00" Importe="4200.00" ObjetoImp="02">
+            <cfdi:Impuestos>
+                <cfdi:Traslados>
+                    <cfdi:Traslado Base="4200.00" Importe="672.00" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+                </cfdi:Traslados>
+            </cfdi:Impuestos>
+        </cfdi:Concepto>
+    </cfdi:Conceptos>
+    <cfdi:Impuestos TotalImpuestosTrasladados="672.00">
+        <cfdi:Traslados>
+            <cfdi:Traslado Base="4200.00" Importe="672.00" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+        </cfdi:Traslados>
+    </cfdi:Impuestos>
+    <cfdi:Complemento>
+        <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sat.gob.mx/TimbreFiscalDigital http://www.sat.gob.mx/sitio_internet/cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd" Version="1.1" UUID="b2020010-0000-4000-8000-000000000208" FechaTimbrado="2026-10-28T18:40:00" RfcProvCertif="SPR190613I52" SelloCFD="MOCK_SELLO_CFDI_ROJO_02" NoCertificadoSAT="30001000000500003456" SelloSAT="MOCK_SELLO_SAT_ROJO_02"/>
+    </cfdi:Complemento>
+</cfdi:Comprobante>

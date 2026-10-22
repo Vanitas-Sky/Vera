@@ -15,6 +15,7 @@ class Role extends Model
     public const ADMIN_PYME = 'ADMIN_PYME';
     public const ACCOUNTANT = 'ACCOUNTANT';
     public const OPERATOR = 'OPERATOR';
+    public const AUDITOR_EXTERNO = 'AUDITOR_EXTERNO';
 
     /**
      * The attributes that are mass assignable.

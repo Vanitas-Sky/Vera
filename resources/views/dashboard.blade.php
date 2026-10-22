@@ -389,9 +389,13 @@
         document.addEventListener('DOMContentLoaded', async function() {
             const skeleton = document.getElementById('ai-skeleton');
             const content = document.getElementById('ai-content');
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentPeriod = urlParams.get('period') || @json($selectedPeriod);
+            const summaryUrl = new URL(@json(route('ai.dashboard.summary')));
+            summaryUrl.searchParams.set('period', currentPeriod);
 
             try {
-                const response = await fetch('{{ route("ai.dashboard.summary") }}', {
+                const response = await fetch(summaryUrl.toString(), {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',

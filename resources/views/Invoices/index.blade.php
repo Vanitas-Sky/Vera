@@ -1,26 +1,51 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-white leading-tight">
-            {{ __('Bóveda de Facturas (CFDI)') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-white leading-tight">
+                {{ __('Bóveda de Facturas (CFDI)') }}
+            </h2>
+
+            @if(Auth::user()->isAuditor())
+            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-xs font-bold uppercase tracking-wider">
+                Auditoría Fiscal CFDI
+            </span>
+            @endif
+        </div>
     </x-slot>
+
+    @php
+        $isAuditor = Auth::user()->isAuditor();
+    @endphp
 
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <!-- Alertas -->
+            <!-- Alertas de Sesión -->
             @if (session('success'))
             <div class="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm font-medium">
                 {{ session('success') }}
             </div>
             @endif
             @if (session('error'))
-            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-medium">
+            <div class="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-lg text-sm font-medium">
                 {{ session('error') }}
             </div>
             @endif
 
-            <!-- Formulario de Subida -->
+            {{-- Banner Informativo para el Auditor Externo --}}
+            @if($isAuditor)
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-xs">
+                    <span class="font-bold">Modo Auditoría CFDI:</span> Acceso completo para revisión de comprobantes fiscales digitales, importes de IVA y partidas. La carga de nuevos paquetes de facturas (.XML / .ZIP) está reservada para el personal administrativo.
+                </div>
+            </div>
+            @endif
+
+            {{-- Formulario de Subida: Oculto para el Auditor Externo --}}
+            @if(!$isAuditor)
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6">
                 <form action="{{ route('invoices.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
@@ -44,8 +69,76 @@
                     @enderror
                 </form>
             </div>
+            @endif
 
-            <!-- Buscador y Filtros Inteligentes (Live Search) -->
+            {{-- Resumen del Lote Procesado (Si aplica) --}}
+            @if (session('import_summary'))
+            @php $sum = session('import_summary'); @endphp
+            <div class="mb-6 bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="flex h-3 w-3 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                        <h3 class="font-bold text-slate-800 text-sm">Resumen Fiscal del Lote Procesado</h3>
+                    </div>
+                    <span class="text-xs text-slate-500 font-medium">
+                        {{ $sum['success_count'] }} procesadas con éxito
+                        @if($sum['duplicate_count'] > 0) · {{ $sum['duplicate_count'] }} duplicadas omitidas @endif
+                        @if($sum['error_count'] > 0) · {{ $sum['error_count'] }} no correspondientes @endif
+                    </span>
+                </div>
+
+                <!-- Semáforos Métricos -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <!-- Deducible (Verde) -->
+                    <div class="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-emerald-800 uppercase tracking-wide">🟢 Deducibles</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-full">{{ $sum['verde_count'] }}</span>
+                        </div>
+                        <p class="text-lg font-black text-emerald-700 mt-1">${{ number_format($sum['verde_amount'], 2) }}</p>
+                        <p class="text-[11px] text-emerald-600 mt-0.5">Gastos alineados al giro de la empresa.</p>
+                    </div>
+
+                    <!-- Riesgo Fiscal (Amarillo) -->
+                    <div class="bg-amber-50/70 border border-amber-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-amber-800 uppercase tracking-wide">🟡 Riesgo Fiscal</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full">{{ $sum['amarillo_count'] }}</span>
+                        </div>
+                        <p class="text-lg font-black text-amber-700 mt-1">${{ number_format($sum['amarillo_amount'], 2) }}</p>
+                        <p class="text-[11px] text-amber-600 mt-0.5">Requieren contrato o justificación de materialidad.</p>
+                    </div>
+
+                    <!-- No Deducible (Rojo) -->
+                    <div class="bg-rose-50/70 border border-rose-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-rose-800 uppercase tracking-wide">🔴 No Deducibles</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 bg-rose-200 text-rose-900 rounded-full">{{ $sum['rojo_count'] }}</span>
+                        </div>
+                        <p class="text-lg font-black text-rose-700 mt-1">${{ number_format($sum['rojo_amount'], 2) }}</p>
+                        <p class="text-[11px] text-rose-600 mt-0.5">Conceptos no indispensables según LISR.</p>
+                    </div>
+                </div>
+
+                <!-- Dictamen en Lenguaje Natural -->
+                @if(!empty($sum['natural_summary']))
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex items-start gap-3">
+                    <div class="flex-shrink-0 w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold shadow-sm">
+                        AI
+                    </div>
+                    <div class="flex-1 text-xs text-slate-700 leading-relaxed">
+                        <p class="font-semibold text-slate-900 mb-0.5">Dictamen de Auditoría Vera ERP:</p>
+                        <p>{{ $sum['natural_summary'] }}</p>
+                    </div>
+                </div>
+                @endif
+            </div>
+            @endif
+
+            <!-- Buscador y Filtros Inteligentes (Live Search - Disponible para el Auditor) -->
             <form method="GET" action="{{ route('invoices.index') }}" id="searchForm" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col lg:flex-row gap-4 lg:items-start">
 
                 <!-- Buscador Profundo -->
@@ -62,16 +155,14 @@
                     </div>
                 </div>
 
-                <!-- Filtro de Periodo (NUEVO) -->
+                <!-- Filtro de Periodo -->
                 <div class="w-full sm:w-1/3 lg:w-40">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mes Fiscal</label>
-                    <!-- Truco: Si el periodo es solo el año (4 chars), mostramos texto, si no, mes. -->
-                    <input type="{{ strlen($period) == 4 ? 'text' : 'month' }}" name="period" id="periodInput" value="{{ $period }}" 
+                    <input type="{{ strlen($period) == 4 ? 'text' : 'month' }}" name="period" id="periodInput" value="{{ $period }}"
                         class="w-full border-slate-300 rounded-md focus:ring-vera-green focus:border-vera-green text-sm shadow-sm cursor-pointer"
                         placeholder="YYYY">
-                    
+
                     @if(strlen($period) > 4)
-                    <!-- Botón mágico para ver todo el año -->
                     <button type="button" onclick="verTodoElAno()" class="text-[10px] font-bold text-vera-green hover:text-emerald-700 hover:underline mt-1.5 block w-full text-left transition">
                         &rarr; Ver todo {{ substr($period, 0, 4) }}
                     </button>
@@ -116,7 +207,9 @@
                     const periodInput = document.getElementById('periodInput');
                     let timeout = null;
 
-                    function submitForm() { form.submit(); }
+                    function submitForm() {
+                        form.submit();
+                    }
 
                     searchInput.addEventListener('input', function() {
                         clearTimeout(timeout);
@@ -128,11 +221,10 @@
                     periodInput.addEventListener('change', submitForm);
                 });
 
-                // Función mágica para convertir el input a año y buscar
                 function verTodoElAno() {
                     const input = document.getElementById('periodInput');
                     const currentYear = input.value.substring(0, 4);
-                    input.type = 'text'; // Cambiamos el tipo para que acepte solo 4 números
+                    input.type = 'text';
                     input.value = currentYear;
                     document.getElementById('searchForm').submit();
                 }
@@ -140,7 +232,6 @@
 
             <!-- Tabla de Resultados -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 relative">
-                
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200">
                         <thead class="bg-slate-50">
@@ -216,8 +307,8 @@
                             </tr>
                             @endforelse
                         </tbody>
-                        
-                        <!-- NUEVO: PIE DE TABLA CON TOTALES DINÁMICOS -->
+
+                        <!-- Pie de Tabla con Totales Dinámicos -->
                         <tfoot class="bg-slate-100 border-t-2 border-slate-200">
                             <tr>
                                 <td colspan="5" class="px-6 py-4 text-right font-bold text-slate-500 uppercase tracking-wider text-xs">

@@ -47,11 +47,30 @@
                         <span class="text-xs text-slate-400 font-medium ml-2">Vera está analizando...</span>
                     </span>
                 </div>
+                <!-- Input Box -->
+                <!-- Chips de Sugerencia Rápida (Novedades de la Versión) -->
+                <div class="px-4 pt-3 pb-1 bg-white border-t border-slate-100 flex flex-wrap gap-2">
+                    <button type="button" class="quick-chip text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-full font-medium transition flex items-center gap-1.5">
+                        <span>⚖️ Auditar deducibilidad de facturas según mi giro</span>
+                    </button>
+                    <button type="button" class="quick-chip text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-full font-medium transition flex items-center gap-1.5">
+                        <span>📊 ¿Cómo va el balance de ingresos vs egresos?</span>
+                    </button>
+                    <button type="button" class="quick-chip text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-full font-medium transition flex items-center gap-1.5">
+                        <span>👥 Resumen integral de nómina, IMSS y retenciones</span>
+                    </button>
+                    <button id="clear-chat-btn" type="button" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg border border-slate-300 transition flex items-center gap-1.5 shadow-sm">
+                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        <span>Nueva sesión / Limpiar memoria</span>
+                    </button>
+                </div>
 
                 <!-- Input Box -->
-                <div class="p-4 bg-white border-t border-slate-200">
+                <div class="p-4 bg-white">
                     <form id="ai-form" class="flex gap-3">
-                        <input type="text" id="question" autocomplete="off" placeholder="Escribe tu consulta aquí..."
+                        <input type="text" id="question" autocomplete="off" placeholder="Escribe tu consulta o selecciona una sugerencia arriba..."
                             class="flex-1 rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 text-sm py-3 px-4" required>
 
                         <button type="submit" id="send-btn" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center gap-2">
@@ -75,30 +94,100 @@
             const chatbox = document.getElementById('chatbox');
             const loading = document.getElementById('loading');
             const sendBtn = document.getElementById('send-btn');
+            const clearChatBtn = document.getElementById('clear-chat-btn');
 
-            // Configurar Marked.js para seguridad y saltos de línea
-            marked.setOptions({
-                breaks: true
+            marked.setOptions({ breaks: true });
+
+            const STORAGE_KEY_HISTORY = 'vera_ai_chat_history';
+            const STORAGE_KEY_HTML = 'vera_ai_chat_html';
+            const STORAGE_KEY_TIME = 'vera_ai_chat_last_time';
+            const INACTIVITY_LIMIT_MINUTES = 25; // Expira tras 25 min sin uso
+
+            let chatHistory = [];
+
+            // 1. Verificar caducidad y restaurar si la sesión sigue viva
+            function initSession() {
+                const lastTime = localStorage.getItem(STORAGE_KEY_TIME);
+                const savedHistory = localStorage.getItem(STORAGE_KEY_HISTORY);
+                const savedHTML = localStorage.getItem(STORAGE_KEY_HTML);
+
+                if (lastTime && savedHistory && savedHTML) {
+                    const minutesElapsed = (Date.now() - parseInt(lastTime, 10)) / (1000 * 60);
+
+                    if (minutesElapsed < INACTIVITY_LIMIT_MINUTES) {
+                        // Sesión válida: restauramos los mensajes y la memoria
+                        chatHistory = JSON.parse(savedHistory);
+                        chatbox.innerHTML = savedHTML;
+                        scrollToBottom();
+                        updateActivityTime();
+                        return;
+                    }
+                }
+                // Si expiró o no existe, limpiamos
+                resetSessionStorage();
+            }
+
+            function updateActivityTime() {
+                localStorage.setItem(STORAGE_KEY_TIME, Date.now().toString());
+            }
+
+            function persistCurrentState() {
+                localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(chatHistory));
+                localStorage.setItem(STORAGE_KEY_HTML, chatbox.innerHTML);
+                updateActivityTime();
+            }
+
+            function resetSessionStorage() {
+                localStorage.removeItem(STORAGE_KEY_HISTORY);
+                localStorage.removeItem(STORAGE_KEY_HTML);
+                localStorage.removeItem(STORAGE_KEY_TIME);
+                chatHistory = [];
+            }
+
+            // Inicializamos al cargar la página
+            initSession();
+
+            // 2. Botón manual de limpiar chat / nueva sesión
+            if (clearChatBtn) {
+                clearChatBtn.addEventListener('click', function() {
+                    resetSessionStorage();
+                    chatbox.innerHTML = `
+                        <div class="flex gap-4">
+                            <img src="{{ asset('img/noche.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200">
+                            <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm text-slate-700">
+                                <p>Sesión reiniciada. He limpiado la memoria de la conversación anterior.</p>
+                                <p class="mt-2">¿Sobre qué factura, nómina, colaborador o gasto fijo deseas consultar?</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // 3. Listener para chips de sugerencias rápidas
+            document.querySelectorAll('.quick-chip').forEach(button => {
+                button.addEventListener('click', function() {
+                    const chipText = this.innerText.replace(/^[^\w\s¿?]+/, '').trim();
+                    questionInput.value = chipText;
+                    form.dispatchEvent(new Event('submit'));
+                });
             });
 
+            // 4. Envío del formulario
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
                 const question = questionInput.value.trim();
                 if (!question) return;
 
-                // 1. Mostrar la pregunta del usuario en el chat
                 appendMessage('user', question);
                 questionInput.value = '';
 
-                // 2. Bloquear input y mostrar loading
                 questionInput.disabled = true;
                 sendBtn.disabled = true;
                 loading.classList.remove('hidden');
                 scrollToBottom();
 
                 try {
-                    // 3. Hacer la llamada AJAX al controlador
                     const response = await fetch('{{ route("ai.ask") }}', {
                         method: 'POST',
                         headers: {
@@ -106,23 +195,25 @@
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
                         body: JSON.stringify({
-                            question: question
+                            question: question,
+                            history: chatHistory
                         })
                     });
 
                     const data = await response.json();
 
-                    // 4. Procesar la respuesta
                     if (data.success) {
                         appendMessage('ai', data.answer);
+                        chatHistory.push({ role: 'user', content: question });
+                        chatHistory.push({ role: 'assistant', content: data.answer });
+                        persistCurrentState(); // Guardamos tanto el HTML como la memoria
                     } else {
                         appendMessage('error', 'Ocurrió un error: ' + data.error);
                     }
 
                 } catch (error) {
-                    appendMessage('error', 'Fallo de conexión. Revisa tu internet.');
+                    appendMessage('error', 'Fallo de conexión o respuesta inesperada del servidor.');
                 } finally {
-                    // 5. Restaurar interfaz
                     loading.classList.add('hidden');
                     questionInput.disabled = false;
                     sendBtn.disabled = false;
@@ -136,9 +227,7 @@
                 div.className = 'flex gap-4 ' + (sender === 'user' ? 'flex-row-reverse' : '');
 
                 let innerHTML = '';
-
                 if (sender === 'user') {
-                    // Burbuja del Usuario (Oscura)
                     innerHTML = `
                         <div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-white font-bold text-xs shadow-md">TU</div>
                         <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl rounded-tr-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm">
@@ -146,15 +235,13 @@
                         </div>
                     `;
                 } else if (sender === 'ai') {
-                    // Burbuja de la IA (Clara + Parseo de Markdown)
                     innerHTML = `
-                        <img src="{{ asset('img/noche.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200" style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;">
+                        <img src="{{ asset('img/noche.png') }}" alt="Vera AI" class="flex-shrink-0 w-8 h-8 rounded-full object-cover shadow-md border border-indigo-200">
                         <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm text-slate-700 overflow-x-auto" style="line-height: 1.6;">
                             ${marked.parse(text)}
                         </div>
                     `;
                 } else {
-                    // Burbuja de Error
                     innerHTML = `
                         <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white font-bold text-xs shadow-md">!</div>
                         <div class="bg-red-50 text-red-700 border border-red-200 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-sm text-sm font-semibold">
@@ -168,15 +255,9 @@
             }
 
             function escapeHTML(str) {
-                return str.replace(/[&<>'"]/g,
-                    tag => ({
-                        '&': '&amp;',
-                        '<': '&lt;',
-                        '>': '&gt;',
-                        "'": '&#39;',
-                        '"': '&quot;'
-                    } [tag])
-                );
+                return str.replace(/[&<>'"]/g, tag => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+                }[tag]));
             }
 
             function scrollToBottom() {

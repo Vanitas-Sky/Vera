@@ -1,11 +1,19 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 class="font-semibold text-xl text-white leading-tight">
-                {{ __('Conciliación Bancaria y Discrepancia') }}
-            </h2>
+            <div class="flex items-center gap-3">
+                <h2 class="font-semibold text-xl text-white leading-tight">
+                    {{ __('Conciliación Bancaria y Discrepancia') }}
+                </h2>
 
-            <!-- Filtro de Tiempo (Igual al Dashboard principal) -->
+                @if(Auth::user()->isAuditor())
+                <span class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-xs font-bold uppercase tracking-wider">
+                    Auditoría Bancaria
+                </span>
+                @endif
+            </div>
+
+            <!-- Filtro de Tiempo (Disponible para todos) -->
             <form action="{{ route('conciliations.index') }}" method="GET" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                 <label for="period" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mes Fiscal:</label>
                 <input type="month" id="period" name="period" value="{{ $period }}" 
@@ -15,22 +23,27 @@
         </div>
     </x-slot>
 
+    @php
+        $isAuditor = Auth::user()->isAuditor();
+    @endphp
+
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <!-- Alertas -->
+            <!-- Alertas de Sesión -->
             @if (session('success'))
             <div class="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm font-medium">
                 {{ session('success') }}
             </div>
             @endif
             @if (session('error'))
-            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm font-medium">
+            <div class="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-lg text-sm font-medium">
                 {{ session('error') }}
             </div>
             @endif
 
-            <!-- Formulario de Subida -->
+            {{-- Formulario de Carga: Solo para Administradores / Contadores --}}
+            @if(!$isAuditor)
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6">
                 <form action="{{ route('conciliations.preview') }}" method="POST" enctype="multipart/form-data">
                     @csrf
@@ -46,29 +59,40 @@
                     </div>
                 </form>
             </div>
+            @else
+            {{-- Banner Informativo para el Auditor Externo --}}
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-xs">
+                    <span class="font-bold">Modo Auditoría Bancaria:</span> Supervisión de flujos de efectivo, correlación contra gastos facturados ante el SAT y detección de discrepancia fiscal. La importación de nuevos estados de cuenta bancarios está reservada para el Administrador o Contador.
+                </div>
+            </div>
+            @endif
 
-            <!-- Panel de Matemáticas de Discrepancia -->
+            <!-- Panel de Matemáticas de Discrepancia (Visible y Calculado para Todos) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
                 <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Gastos Facturados (SAT)</p>
-                    <p class="text-3xl font-black text-slate-700 mt-2">${{ number_format($satExpenses, 2) }}</p>
+                    <p class="text-3xl font-black text-slate-700 mt-2">${{ number_format($satExpenses, 2) }} <span class="text-sm font-normal text-slate-400">MXN</span></p>
                     <p class="text-xs text-slate-500 mt-1">Egresos registrados en tu Bóveda XML.</p>
                 </div>
 
                 <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Retiros Bancarios Reales</p>
-                    <p class="text-3xl font-black text-slate-700 mt-2">${{ number_format($bankWithdrawals, 2) }}</p>
+                    <p class="text-3xl font-black text-slate-700 mt-2">${{ number_format($bankWithdrawals, 2) }} <span class="text-sm font-normal text-slate-400">MXN</span></p>
                     <p class="text-xs text-slate-500 mt-1">Dinero que efectivamente salió de tu cuenta.</p>
                 </div>
 
-                <div class="p-6 rounded-lg border shadow-sm flex flex-col justify-center {{ $discrepancy > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200' }}">
-                    <p class="text-xs font-bold uppercase tracking-wider {{ $discrepancy > 0 ? 'text-red-500' : 'text-emerald-600' }}">Discrepancia Fiscal (Riesgo)</p>
-                    <p class="text-4xl font-black mt-2 {{ $discrepancy > 0 ? 'text-red-600' : 'text-emerald-700' }}">
-                        ${{ number_format($discrepancy, 2) }}
+                <div class="p-6 rounded-lg border shadow-sm flex flex-col justify-center {{ $discrepancy > 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200' }}">
+                    <p class="text-xs font-bold uppercase tracking-wider {{ $discrepancy > 0 ? 'text-rose-600' : 'text-emerald-600' }}">Discrepancia Fiscal (Riesgo)</p>
+                    <p class="text-4xl font-black mt-2 {{ $discrepancy > 0 ? 'text-rose-600' : 'text-emerald-700' }}">
+                        ${{ number_format($discrepancy, 2) }} <span class="text-base font-normal">MXN</span>
                     </p>
                     @if($discrepancy > 0)
-                        <p class="text-xs text-red-700 mt-1 font-semibold">⚠️ Peligro: Tienes retiros bancarios sin una factura que los ampare.</p>
+                        <p class="text-xs text-rose-700 mt-1 font-semibold">⚠️ Peligro: Tienes retiros bancarios sin una factura que los ampare.</p>
                     @else
                         <p class="text-xs text-emerald-800 mt-1 font-semibold">✓ Saludable: Tienes facturas suficientes para amparar tus salidas.</p>
                     @endif
@@ -76,10 +100,10 @@
 
             </div>
 
-            <!-- Buscador y Filtros Bancarios (Live Search) -->
+            <!-- Buscador y Filtros Bancarios (Live Search - Disponible para el Auditor) -->
             <form method="GET" action="{{ route('conciliations.index') }}" id="searchForm" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-end">
                 
-                <!-- Mantener el filtro de periodo oculto para que no se pierda al buscar texto -->
+                <!-- Mantener el filtro de periodo oculto -->
                 <input type="hidden" name="period" value="{{ $period }}">
 
                 <!-- Buscador de Texto (Concepto) -->
@@ -107,8 +131,8 @@
                 <!-- Botón Limpiar -->
                 <div class="flex gap-2 w-full sm:w-auto">
                     @if(request('search') || request('type', 'todos') != 'todos')
-                        <a href="{{ route('conciliations.index', ['period' => $period]) }}" class="px-4 py-2.5 bg-white border border-slate-300 text-red-600 font-bold rounded-md hover:bg-red-50 transition shadow-sm text-sm flex items-center">
-                            X Limpiar
+                        <a href="{{ route('conciliations.index', ['period' => $period]) }}" class="px-4 py-2.5 bg-white border border-slate-300 text-rose-600 font-bold rounded-md hover:bg-rose-50 transition shadow-sm text-sm flex items-center">
+                            ✕ Limpiar
                         </a>
                     @endif
                 </div>
@@ -135,8 +159,9 @@
 
             <!-- Tabla de Transacciones -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200">
-                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                     <h3 class="text-sm font-bold text-vera-dark uppercase tracking-wider">Movimientos Importados del Mes</h3>
+                    <span class="text-xs text-slate-500 font-medium">{{ $transactions->total() }} movimiento(s)</span>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200">
@@ -153,13 +178,13 @@
                             <tr class="hover:bg-slate-50">
                                 <td class="px-6 py-4 font-mono text-slate-600">{{ $tx->transaction_date->format('d/m/Y') }}</td>
                                 <td class="px-6 py-4 font-medium text-vera-dark">{{ $tx->description }}</td>
-                                <td class="px-6 py-4 text-right font-bold text-red-500">{{ $tx->withdrawal > 0 ? '$'.number_format($tx->withdrawal, 2) : '-' }}</td>
-                                <td class="px-6 py-4 text-right font-bold text-emerald-600">{{ $tx->deposit > 0 ? '$'.number_format($tx->deposit, 2) : '-' }}</td>
+                                <td class="px-6 py-4 text-right font-bold text-rose-500">{{ $tx->withdrawal > 0 ? '$'.number_format($tx->withdrawal, 2).' MXN' : '-' }}</td>
+                                <td class="px-6 py-4 text-right font-bold text-emerald-600">{{ $tx->deposit > 0 ? '$'.number_format($tx->deposit, 2).' MXN' : '-' }}</td>
                             </tr>
                             @empty
                             <tr>
                                 <td colspan="4" class="px-6 py-12 text-center text-sm text-slate-400">
-                                    No hay movimientos bancarios registrados para este mes. Sube tu CSV para conciliar.
+                                    No hay movimientos bancarios registrados para este mes.
                                 </td>
                             </tr>
                             @endforelse

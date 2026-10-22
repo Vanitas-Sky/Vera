@@ -4,16 +4,56 @@
             <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('Control de OpEx (Gastos Fijos)') }}
             </h2>
+
+            @php
+                $isAuditor = Auth::user()->isAuditor();
+            @endphp
+
+            {{-- Botón Nuevo Contrato: Solo para Administradores / Contadores --}}
+            @if(!$isAuditor)
             <a href="{{ route('opex.create') }}" class="bg-vera-dark text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition inline-block">
                 + Nuevo Contrato
             </a>
+            @else
+            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-xs font-bold uppercase tracking-wider">
+                Auditoría OpEx
+            </span>
+            @endif
         </div>
     </x-slot>
+
+    @php
+        $isAuditor = Auth::user()->isAuditor();
+    @endphp
 
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <!-- Centro de Notificaciones / Alertas -->
+            <!-- Alertas de Éxito o Error de Sesión -->
+            @if (session('success'))
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm font-medium">
+                {{ session('success') }}
+            </div>
+            @endif
+            @if (session('error'))
+            <div class="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-lg text-sm font-medium">
+                {{ session('error') }}
+            </div>
+            @endif
+
+            {{-- Banner Informativo para el Auditor Externo --}}
+            @if($isAuditor)
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-xs">
+                    <span class="font-bold">Modo Auditoría Financiera:</span> Consulta de contratos vigentes, pólizas indexadas y compromisos de gastos fijos recurrentes (OpEx). El registro, modificación y suspensión de contratos están bloqueados.
+                </div>
+            </div>
+            @endif
+
+            <!-- Centro de Notificaciones / Alertas de Vencimiento -->
             @if(count($alerts) > 0)
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 mb-6">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
@@ -46,7 +86,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200 p-6 md:col-span-1">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Proyección Costo Fijo Mensual</p>
-                    <p class="text-4xl font-black text-vera-dark mt-2">${{ number_format($totalMonthlyOpex, 2) }}</p>
+                    <p class="text-4xl font-black text-vera-dark mt-2">${{ number_format($totalMonthlyOpex, 2) }} <span class="text-base font-normal text-slate-400">MXN</span></p>
                     <p class="text-xs text-slate-500 mt-2">Esta es tu carga operativa base antes de sueldos o impuestos.</p>
                 </div>
 
@@ -63,9 +103,8 @@
                         </p>
                     </div>
 
-                    <!-- Tarjeta 2: Proyección (Cumple la promesa del documento) -->
+                    <!-- Tarjeta 2: Proyección Anualizada -->
                     <div class="bg-vera-dark p-6 rounded-lg border border-slate-700 shadow-sm flex flex-col justify-center relative overflow-hidden">
-                        <!-- Detalle decorativo de UI -->
                         <div class="absolute -right-6 -top-6 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
 
                         <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Proyección Anualizada</h3>
@@ -129,7 +168,7 @@
                 <div class="flex gap-2 w-full sm:w-auto">
                     @if(request('search') || request('status', 'activos') != 'activos' || request('category', 'todas') != 'todas')
                     <a href="{{ route('opex.index') }}" class="px-4 py-2.5 bg-white border border-slate-300 text-red-600 font-bold rounded-md hover:bg-red-50 transition shadow-sm text-sm flex items-center">
-                        X Limpiar
+                        ✕ Limpiar
                     </a>
                     @endif
                 </div>
@@ -160,8 +199,9 @@
 
             <!-- Tabla de Contratos Activos -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-slate-200">
-                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                     <h3 class="text-sm font-bold text-vera-dark uppercase tracking-wider">Pólizas y Servicios Indexados</h3>
+                    <span class="text-xs text-slate-500 font-medium">{{ $expenses->total() }} contrato(s)</span>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200">
@@ -172,8 +212,10 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Día de Pago</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Monto Mensual</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Vigencia Contrato</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Estatus</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Estatus</th>
+                                @if(!$isAuditor)
                                 <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-sm">
@@ -190,7 +232,7 @@
                                     Día {{ $expense->due_day }}
                                 </td>
                                 <td class="px-6 py-4 text-right font-bold text-vera-dark">
-                                    ${{ number_format($expense->monthly_amount, 2) }}
+                                    ${{ number_format($expense->monthly_amount, 2) }} MXN
                                 </td>
                                 <td class="px-6 py-4 text-right text-xs text-slate-500">
                                     {{ $expense->contract_start_date ? $expense->contract_start_date->format('d/m/Y') : 'N/A' }} <br>
@@ -206,6 +248,9 @@
                                     <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">Inactivo</span>
                                     @endif
                                 </td>
+
+                                {{-- Columna de Acciones: Solo para Administradores / Contadores --}}
+                                @if(!$isAuditor)
                                 <td class="px-6 py-4 text-center">
                                     <div class="flex justify-center items-center gap-3">
                                         <!-- Botón Editar -->
@@ -216,7 +261,6 @@
                                         <span class="text-slate-200">|</span>
 
                                         <!-- Botón Dar de Baja / Reactivar -->
-                                        <!-- Para Dar de Baja un Contrato -->
                                         <form action="{{ route('opex.toggle', $expense->id) }}" method="POST" class="inline-block form-confirm"
                                             data-title="{{ $expense->is_active ? '¿Dar de baja el contrato?' : '¿Reactivar el contrato?' }}"
                                             data-text="{{ $expense->is_active ? 'Ya no se contabilizará en tu OpEx mensual proyectado.' : 'Volverá a aparecer en tu presupuesto.' }}"
@@ -229,10 +273,11 @@
                                         </form>
                                     </div>
                                 </td>
+                                @endif
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-sm text-slate-400">
+                                <td colspan="{{ $isAuditor ? 6 : 7 }}" class="px-6 py-12 text-center text-sm text-slate-400">
                                     No tienes contratos ni gastos fijos registrados.
                                 </td>
                             </tr>
@@ -241,7 +286,8 @@
                     </table>
                 </div>
             </div>
-            <!-- Paginación Inteligente -->
+
+            <!-- Paginación -->
             <div class="mt-6">
                 {{ $expenses->links() }}
             </div>

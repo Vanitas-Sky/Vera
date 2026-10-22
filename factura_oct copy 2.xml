@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd" Version="4.0" Serie="GAS" Folio="9941" Fecha="2026-10-11T10:10:00" CondicionesDePago="Transferencia" SubTotal="62000.00" Moneda="MXN" Total="71920.00" TipoDeComprobante="I" Exportacion="01" MetodoPago="PUE" FormaPago="03" LugarExpedicion="29000" NoCertificado="30001000000500003416" Certificado="MIIFsDCCA5igAwIBAgIUMzAwMDEwMDAwMDA1MDAwMDM0MTYwDQYJKoZIhvcNAQELBQAwggErMQ8wDQYDVQQDDAZBQyBVQVQxLjAsBgNVBAoMJVNFUlZJQ0lPIERFIEFETUlOSVNUUkFDSU9OIFRSSUJVVEFSSUExGjAYBgNVBAsMEVNBVC1JRVMgQXV0aG9yaXR5" Sello="MOCK_SELLO_CFDI_VERDE_03">
+    <cfdi:Emisor Rfc="GCH920115MA9" Nombre="GAS COMBUSTIBLE DEL SURESTE SA DE CV" RegimenFiscal="601"/>
+    <cfdi:Receptor Rfc="BIM011108DJ5" Nombre="BIMBO" DomicilioFiscalReceptor="29200" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+    <cfdi:Conceptos>
+        <cfdi:Concepto ClaveProdServ="15101505" Cantidad="5000" ClaveUnidad="LTR" Unidad="Litro" Descripcion="Suministro de Gas LP Comercial a Granel para Hornos Continuos" ValorUnitario="12.40" Importe="62000.00" ObjetoImp="02">
+            <cfdi:Impuestos>
+                <cfdi:Traslados>
+                    <cfdi:Traslado Base="62000.00" Importe="9920.00" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+                </cfdi:Traslados>
+            </cfdi:Impuestos>
+        </cfdi:Concepto>
+    </cfdi:Conceptos>
+    <cfdi:Impuestos TotalImpuestosTrasladados="9920.00">
+        <cfdi:Traslados>
+            <cfdi:Traslado Base="62000.00" Importe="9920.00" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+        </cfdi:Traslados>
+    </cfdi:Impuestos>
+    <cfdi:Complemento>
+        <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sat.gob.mx/TimbreFiscalDigital http://www.sat.gob.mx/sitio_internet/cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd" Version="1.1" UUID="b2020010-0000-4000-8000-000000000203" FechaTimbrado="2026-10-11T10:10:00" RfcProvCertif="SPR190613I52" SelloCFD="MOCK_SELLO_CFDI_VERDE_03" NoCertificadoSAT="30001000000500003456" SelloSAT="MOCK_SELLO_SAT_VERDE_03"/>
+    </cfdi:Complemento>
+</cfdi:Comprobante>

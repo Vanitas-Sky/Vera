@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Notifications\ResetPasswordNotification;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Company;
 
@@ -79,5 +80,26 @@ class User extends Authenticatable implements MustVerifyEmail
     public function userCompanies(): HasMany
     {
         return $this->hasMany(UserCompany::class);
+    }
+
+    /**
+     * Comprueba si el usuario tiene rol de Auditor Externo.
+     */
+    public function isAuditor(): bool
+    {
+        return $this->role?->name === Role::AUDITOR_EXTERNO;
+    }
+
+    /**
+     * Verifica si el usuario tiene permisos para modificar datos contables/operativos.
+     */
+    public function canMutateData(): bool
+    {
+        return !$this->isAuditor();
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }

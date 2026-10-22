@@ -5,14 +5,25 @@
                 {{ __('Directorio de Empleados') }}
             </h2>
 
+            {{-- Botón Nuevo Empleado: Solo para Administradores / Contadores --}}
+            @if(!Auth::user()->isAuditor())
             <a href="{{ route('employees.create') }}" class="bg-vera-green hover:bg-emerald-400 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition text-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m7-7H4"></path>
                 </svg>
                 Registrar Nuevo Empleado
             </a>
+            @else
+            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-xs font-bold uppercase tracking-wider">
+                Auditoría de Plantilla
+            </span>
+            @endif
         </div>
     </x-slot>
+
+    @php
+        $isAuditor = Auth::user()->isAuditor();
+    @endphp
 
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -24,7 +35,25 @@
             </div>
             @endif
 
-            <!-- Filtros y Buscador -->
+            @if (session('error'))
+            <div class="mb-4 bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-lg text-sm font-medium">
+                {{ session('error') }}
+            </div>
+            @endif
+
+            {{-- Banner Informativo para el Auditor Externo --}}
+            @if($isAuditor)
+            <div class="mb-6 bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-xs">
+                    <span class="font-bold">Modo Auditoría Laboral:</span> Directorio en modo de solo lectura para cotejo de plantilla, salarios base y cumplimiento de seguridad social ante IMSS/SAT. El alta, modificación o baja de colaboradores están bloqueadas.
+                </div>
+            </div>
+            @endif
+
+            <!-- Filtros y Buscador (Disponible para todos) -->
             <form method="GET" action="{{ route('employees.index') }}" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Buscar (Nombre, RFC, CURP, NSS, Puesto, Correo, Teléfono)</label>
@@ -94,12 +123,12 @@
                                 <!-- Identificadores -->
                                 <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-600">
                                     <div><span class="text-slate-400">RFC:</span> {{ $employee->rfc }}</div>
-                                    <div><span class="text-slate-400">NSS:</span> {{ $employee->nss }}</div>
+                                    <div><span class="text-slate-400">NSS:</span> {{ $employee->nss ?? 'N/D' }}</div>
                                 </td>
 
                                 <!-- Salario Bruto -->
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-slate-800">
-                                    ${{ number_format($employee->base_salary, 2) }}
+                                    ${{ number_format($employee->base_salary, 2) }} MXN
                                     <div class="text-[10px] text-slate-400 font-normal uppercase tracking-wider">{{ $employee->periodicity }}</div>
                                 </td>
 
@@ -116,34 +145,37 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end gap-2">
                                         
-                                        <!-- Botón Deducciones -->
+                                        <!-- Botón Deducciones (DISPONIBLE PARA EL AUDITOR) -->
                                         <a href="{{ route('employees.deductions.index', $employee->id) }}" 
                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200/60 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm"
-                                           title="Gestionar créditos, Infonavit o deducciones fijas">
+                                           title="Consultar retenciones y pasivos laborales">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
                                             Deducciones
                                         </a>
 
-                                        <!-- Botón Editar -->
-                                        <a href="{{ route('employees.edit', $employee->id) }}" 
-                                           class="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-md text-xs font-bold transition shadow-sm">
-                                            Editar
-                                        </a>
+                                        {{-- Botones Mutativos: Ocultos para el Auditor Externo --}}
+                                        @if(!$isAuditor)
+                                            <!-- Botón Editar -->
+                                            <a href="{{ route('employees.edit', $employee->id) }}" 
+                                               class="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-md text-xs font-bold transition shadow-sm">
+                                                Editar
+                                            </a>
 
-                                        <!-- Botón Dar de Baja -->
-                                        @if($employee->is_active)
-                                        <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" class="inline-block form-confirm"
-                                            data-title="¿Dar de baja al empleado?"
-                                            data-text="Pasará a estatus inactivo y ya no se incluirá en el cálculo de nómina."
-                                            data-confirm="Sí, dar de baja">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
-                                                Baja
-                                            </button>
-                                        </form>
+                                            <!-- Botón Dar de Baja -->
+                                            @if($employee->is_active)
+                                            <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" class="inline-block form-confirm"
+                                                data-title="¿Dar de baja al empleado?"
+                                                data-text="Pasará a estatus inactivo y ya no se incluirá en el cálculo de nómina."
+                                                data-confirm="Sí, dar de baja">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
+                                                    Baja
+                                                </button>
+                                            </form>
+                                            @endif
                                         @endif
 
                                     </div>

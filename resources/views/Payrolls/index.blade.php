@@ -5,7 +5,12 @@
                 {{ __('Historial de Nóminas') }}
             </h2>
 
-            <!-- Botón de Generación -->
+            @php
+                $isAuditor = Auth::user()->isAuditor();
+            @endphp
+
+            {{-- Botón de Generación: Oculto para el Auditor Externo --}}
+            @if(!$isAuditor)
             <form action="{{ route('payrolls.generate') }}" method="POST" class="form-confirm"
                 data-title="¿Generar la nómina del mes?"
                 data-text="Se calculará la nómina para todos los empleados activos y este proceso no se puede deshacer."
@@ -18,8 +23,17 @@
                     Calcular Nómina del Mes
                 </button>
             </form>
+            @else
+            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-xs font-bold uppercase tracking-wider">
+                Auditoría de Nómina
+            </span>
+            @endif
         </div>
     </x-slot>
+
+    @php
+        $isAuditor = Auth::user()->isAuditor();
+    @endphp
 
     <div class="py-12 bg-slate-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -36,7 +50,19 @@
             </div>
             @endif
 
-            <!-- Filtro de Nómina -->
+            {{-- Banner Informativo para el Auditor Externo --}}
+            @if($isAuditor)
+            <div class="mb-6 bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-center gap-3 shadow-sm">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-xs">
+                    <span class="font-bold">Modo Auditoría:</span> Consulta de períodos calculados, retenciones de ISR y cuotas obrero-patronales del IMSS. El cálculo de nóminas, envío masivo de comprobantes y eliminación de registros están bloqueados.
+                </div>
+            </div>
+            @endif
+
+            <!-- Filtro de Nómina (Disponible para todos) -->
             <form method="GET" action="{{ route('payrolls.index') }}" id="searchForm" class="mb-6 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-end">
                 <div class="w-full sm:w-64">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Filtrar por Mes Fiscal</label>
@@ -103,7 +129,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end gap-2">
-                                        <!-- Ver Detalles -->
+                                        <!-- Ver Detalles (ACCESO PERMITIDO AL AUDITOR) -->
                                         <a href="{{ route('payrolls.show', $period->id) }}"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200/60 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm"
                                             title="Ver radiografía de cálculos por empleado">
@@ -114,43 +140,46 @@
                                             Detalles
                                         </a>
 
-                                        <!-- Envío Masivo -->
-                                        <form action="{{ route('payrolls.send_emails', $period->id) }}" method="POST" class="inline-block form-confirm"
-                                            data-title="¿Enviar recibos por correo?"
-                                            data-text="Se enviará el PDF a todos los empleados que tengan un correo registrado."
-                                            data-confirm="Sí, enviar masivamente">
-                                            @csrf
-                                            <button type="submit"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200/60 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                                </svg>
-                                                Enviar
-                                            </button>
-                                        </form>
+                                        {{-- Acciones Mutativas: Ocultas para el Auditor Externo --}}
+                                        @if(!$isAuditor)
+                                            <!-- Envío Masivo -->
+                                            <form action="{{ route('payrolls.send_emails', $period->id) }}" method="POST" class="inline-block form-confirm"
+                                                data-title="¿Enviar recibos por correo?"
+                                                data-text="Se enviará el PDF a todos los empleados que tengan un correo registrado."
+                                                data-confirm="Sí, enviar masivamente">
+                                                @csrf
+                                                <button type="submit"
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200/60 text-blue-600 hover:bg-blue-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                                    </svg>
+                                                    Enviar
+                                                </button>
+                                            </form>
 
-                                        <!-- Eliminar -->
-                                        <form action="{{ route('payrolls.destroy', $period->id) }}" method="POST" class="inline-block form-confirm"
-                                            data-title="¿Eliminar el cálculo de este mes?"
-                                            data-text="Esto borrará los recibos de todos los empleados y te permitirá volver a calcular la nómina desde cero."
-                                            data-confirm="Sí, eliminar nómina">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200/60 text-red-600 hover:bg-red-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                </svg>
-                                                Eliminar
-                                            </button>
-                                        </form>
+                                            <!-- Eliminar -->
+                                            <form action="{{ route('payrolls.destroy', $period->id) }}" method="POST" class="inline-block form-confirm"
+                                                data-title="¿Eliminar el cálculo de este mes?"
+                                                data-text="Esto borrará los recibos de todos los empleados y te permitirá volver a calcular la nómina desde cero."
+                                                data-confirm="Sí, eliminar nómina">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200/60 text-red-600 hover:bg-red-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                    </svg>
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-12 text-center text-sm text-slate-500">
-                                    No has calculado ninguna nómina aún. Da clic en el botón superior para comenzar.
+                                    No has calculado ninguna nómina aún.
                                 </td>
                             </tr>
                             @endforelse

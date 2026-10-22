@@ -71,7 +71,7 @@
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Clave SAT</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Descripción</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Estatus de Deducibilidad</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Evaluación</th>
                                 <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Importe</th>
                             </tr>
                         </thead>
@@ -81,13 +81,24 @@
                                 <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ $item['clave_sat'] }}</td>
                                 <td class="px-4 py-3 font-medium text-vera-dark">{{ $item['descripcion'] }} <br> <span class="text-xs text-slate-400 font-normal">{{ $item['cantidad'] }} {{ $item['unidad'] }}</span></td>
                                 <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider
-                                        {{ $item['status'] === 'rojo' ? 'bg-red-100 text-red-800' : '' }}
-                                        {{ $item['status'] === 'amarillo' ? 'bg-amber-100 text-amber-800' : '' }}
-                                        {{ $item['status'] === 'verde' ? 'bg-emerald-100 text-emerald-800' : '' }}
-                                    ">
-                                        {{ $item['status'] }}
+                                    @php
+                                    $status = strtoupper(trim($item['status'] ?? 'VERDE'));
+                                    @endphp
+
+                                    @if (str_contains($status, 'VERDE') || str_contains($status, 'DEDUCIBLE'))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                        VERDE
                                     </span>
+                                    @elseif (str_contains($status, 'AMARILLO') || str_contains($status, 'RIESGO'))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                                        AMARILLO
+                                    </span>
+                                    @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                                        ROJO
+                                    </span>
+                                    @endif
+
                                     <p class="text-[10px] text-slate-500 mt-1 max-w-xs leading-tight">{{ $item['reason'] }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-right font-bold text-vera-dark">${{ number_format($item['importe'], 2) }}</td>
