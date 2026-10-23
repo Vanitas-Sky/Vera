@@ -21,9 +21,9 @@
             <x-input-label for="password" :value="__('Password')" />
 
             <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+                type="password"
+                name="password"
+                required autocomplete="new-password" />
 
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
@@ -33,10 +33,33 @@
             <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
 
             <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
+                type="password"
+                name="password_confirmation" required autocomplete="new-password" />
 
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
+        </div>
+
+        <!-- Checkbox de Términos y Condiciones -->
+        <div class="block mt-4">
+            <label for="terms" class="inline-flex items-start cursor-pointer">
+                <input id="terms"
+                    type="checkbox"
+                    name="terms"
+                    value="1"
+                    required
+                    class="rounded dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-emerald-600 shadow-sm focus:ring-emerald-500 dark:focus:ring-emerald-600 dark:focus:ring-offset-gray-800 mt-1">
+                <span class="ms-2 text-xs text-gray-600 dark:text-gray-400 leading-snug">
+                    He leído y acepto los
+                    <a href="{{ route('terms.show') }}" target="_blank" class="underline text-emerald-500 hover:text-emerald-400 font-medium">
+                        Términos y Condiciones de Servicio
+                    </a>
+                    y el
+                    <a href="{{ route('privacy.show') }}" target="_blank" class="underline text-emerald-500 hover:text-emerald-400 font-medium">
+                        Aviso de Privacidad de Vera ERP.
+                    </a>.
+                </span>
+            </label>
+            <x-input-error :messages="$errors->get('terms')" class="mt-2" />
         </div>
 
         <div class="flex items-center justify-end mt-4">

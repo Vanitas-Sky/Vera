@@ -94,6 +94,10 @@
                         </x-dropdown-link>
                         @endif
 
+                        <x-dropdown-link :href="route('privacy.show')" target="_blank">
+                            {{ __('Aviso de Privacidad') }}
+                        </x-dropdown-link>
+
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
