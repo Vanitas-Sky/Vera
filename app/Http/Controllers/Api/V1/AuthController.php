@@ -22,34 +22,30 @@ class AuthController extends Controller
             'device_name' => 'nullable|string',
         ]);
 
-        $user = User::with('role')->where('email', $request->email)->first();
+        $user = User::where('email', strtolower(trim($request->email)))->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
-                'message' => 'Las credenciales proporcionadas son incorrectas.'
+                'success' => false,
+                'message' => 'Credenciales incorrectas.'
             ], 401);
         }
 
-        if (!$user->is_active) {
-            return response()->json([
-                'message' => 'Tu cuenta se encuentra inactiva. Contacta al administrador.'
-            ], 403);
-        }
-
-        // Crear token de Sanctum identificado para Android
-        $deviceName = $request->device_name ?? 'android_device';
-        $token = $user->createToken($deviceName)->plainTextToken;
+        $token = $user->createToken($request->device_name ?? 'mobile_device')->plainTextToken;
 
         return response()->json([
-            'token' => $token,
-            'user'  => [
-                'id'         => $user->id,
-                'name'       => $user->name,
-                'email'      => $user->email,
-                'role'       => $user->role?->name,
-                'is_auditor' => $user->isAuditor(),
+            'success' => true,
+            'token'   => $token,
+            'user'    => [
+                'id'             => $user->id,
+                'name'           => $user->name,
+                'email'          => $user->email,
+                // Extraemos solo el nombre como texto plano si es un objeto o relación:
+                'role'           => is_object($user->role)
+                    ? ($user->role->name ?? $user->role->nombre ?? 'User')
+                    : ($user->role ?? 'User'),
+                'terms_accepted' => !is_null($user->terms_accepted_at),
             ],
-            'message' => 'Inicio de sesión exitoso.'
         ], 200);
     }
 
@@ -62,6 +58,29 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Sesión cerrada exitosamente.'
+        ], 200);
+    }
+
+    public function acceptTerms(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no autenticado.'
+            ], 401);
+        }
+
+        $user->update([
+            'terms_accepted_at' => now(),
+            'terms_ip'          => $request->ip(),
+            'terms_version'     => '1.0',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Términos y condiciones aceptados correctamente.'
         ], 200);
     }
 

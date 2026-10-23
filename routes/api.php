@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\PayrollApiController;
 use App\Http\Controllers\Api\V1\EmployeeApiController;
 use App\Http\Controllers\Api\V1\FixedExpenseApiController;
 use App\Http\Controllers\Api\V1\CompanyApiController;
+use App\Http\Controllers\Api\V1\AuditorController;
 
 // Controladores Base / Recursos
 use App\Http\Controllers\CompanyController;
@@ -33,6 +34,13 @@ Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    // Rutas protegidas por Sanctum
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/terms/accept', [AuthController::class, 'acceptTerms']);
+
+        // ... aquí van tus rutas de dashboard, opex, etc.
+    });
+
 
     // =====================================================================
     // 2. RUTAS PROTEGIDAS (REQUIEREN TOKEN SANCTUM)
@@ -77,12 +85,22 @@ Route::prefix('v1')->group(function () {
             Route::post('/fixed-expenses', [FixedExpenseApiController::class, 'store']);
             Route::put('/fixed-expenses/{id}', [FixedExpenseApiController::class, 'update']);
             Route::patch('/fixed-expenses/{id}/toggle', [FixedExpenseApiController::class, 'toggle']);
+
+            // Gestión de Auditores (Móvil)
+            Route::get('/auditors', [AuditorController::class, 'index']);
+            Route::post('/auditors', [AuditorController::class, 'store']);
+            Route::delete('/auditors/{id}', [AuditorController::class, 'destroy']);
         });
 
         // Recursos Administrativos
         Route::apiResource('roles', RoleController::class);
         Route::apiResource('companies', CompanyController::class);
         Route::apiResource('user-companies', UserCompanyController::class);
+
+        Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+            Route::post('/terms/accept', [AuthController::class, 'acceptTerms']);
+            // ... demas endpoints de dashboard, opex, etc.
+        });
     });
 });
 

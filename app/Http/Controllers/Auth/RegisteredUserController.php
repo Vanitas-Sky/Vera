@@ -31,15 +31,21 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'terms'    => ['required', 'accepted'], // Requiere marcar explícitamente el checkbox
+        ], [
+            'terms.accepted' => 'Debes aceptar los Términos y Condiciones para crear una cuenta en Vera ERP.'
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name'              => $request->name,
+            'email'             => $request->email,
+            'password'          => Hash::make($request->password),
+            'terms_accepted_at' => now(),
+            'terms_ip'          => $request->ip(),
+            'terms_version'     => '1.0',
         ]);
 
         event(new Registered($user));

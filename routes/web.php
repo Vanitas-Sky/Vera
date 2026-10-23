@@ -153,5 +153,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+Route::get('/terminos-y-condiciones', function () {
+    return view('legal.terms');
+})->name('terms.show');
+
+Route::get('/aviso-de-privacidad', function () {
+    return view('legal.privacy');
+})->name('privacy.show');
 // Rutas de autenticación base de Laravel Breeze (Login, Registro, etc.)
 require __DIR__ . '/auth.php';

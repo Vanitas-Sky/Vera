@@ -33,6 +33,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'job_title',
         'timezone',
         'profile_photo_path', // <-- Permitimos asignación masiva
+        'terms_accepted_at',
+        'terms_ip',
+        'terms_version',
     ];
 
     /**
@@ -52,6 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'terms_accepted_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
     ];

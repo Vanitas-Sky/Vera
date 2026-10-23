@@ -59,7 +59,7 @@
     <!-- Hero Section -->
     <div class="relative bg-vera-dark overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24 lg:pt-28 lg:pb-36 text-center">
-            
+
             <!-- Badge de Novedad -->
             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-8">
                 <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -94,7 +94,7 @@
             <p class="mt-4 max-w-3xl mx-auto text-lg text-vera-gray">Elimina la ceguera contable con herramientas diseñadas para operar sin riesgo fiscal.</p>
 
             <div class="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                
+
                 <!-- Card 1: Conciliación y Discrepancia -->
                 <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition text-left flex flex-col justify-between">
                     <div>
@@ -213,6 +213,15 @@
             <div class="mt-6 md:mt-0">
                 <p class="text-xs text-slate-500">&copy; {{ date('Y') }} Vera Tech S.A. de C.V. Todos los derechos reservados.</p>
             </div>
+            <a href="{{ route('terms.show') }}" target="_blank" class="hover:underline hover:text-gray-300">
+                Términos de Servicio
+            </a>
+            <span>•</span>
+            <a href="{{ route('privacy.show') }}" target="_blank" class="hover:underline hover:text-gray-300">
+                Aviso de Privacidad
+            </a>
+            <span>•</span>
+            <span>Vera ERP © {{ date('Y') }}</span>
         </div>
     </footer>
 

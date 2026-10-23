@@ -25,13 +25,13 @@ class ResetPasswordNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Recuperación de Contraseña - Vera ERP')
-            ->greeting('Hola, ' . $notifiable->name)
-            ->line('Recibimos una solicitud para restablecer la contraseña de tu cuenta.')
-            ->line('Tu código / token de recuperación es:')
+            ->subject('Solicitud de actualización de credenciales - Vera ERP')
+            ->greeting('Estimado/a ' . ($notifiable->name ?? 'Usuario') . ',')
+            ->line('Hemos recibido una solicitud para actualizar la clave de acceso asociada a tu cuenta institucional en Vera ERP.')
+            ->line('Tu código de autorización para el sistema web o la aplicación móvil es:')
             ->line('**' . $this->token . '**')
-            ->line('Ingresa este código en tu aplicación móvil junto con tu nueva contraseña.')
-            ->line('Si no solicitaste este cambio, puedes ignorar este correo de forma segura.')
-            ->salutation('Equipo de Seguridad de Vera ERP');
+            ->line('Este código es de un solo uso y expirará automáticamente transcurridos 60 minutos.')
+            ->line('Si tú no solicitaste este cambio, no es necesario realizar ninguna acción; tus credenciales continuarán protegidas.')
+            ->salutation('Atentamente, Departamento de Seguridad Operativa - Vera ERP');
     }
 }

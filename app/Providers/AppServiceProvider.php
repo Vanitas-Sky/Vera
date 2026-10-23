@@ -24,5 +24,8 @@ class AppServiceProvider extends ServiceProvider
         if (request()->server->has('HTTP_X_FORWARDED_PROTO') || str_contains(request()->getHost(), 'ngrok')) {
             URL::forceScheme('https');
         }
+        if (str_contains(config('app.url'), 'ngrok') || app()->environment('production')) {
+            URL::forceScheme('https');
+        }
     }
 }
